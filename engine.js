@@ -17,11 +17,16 @@ class LipSyncApp {
         this.mediaRecorderVideo = null;
         this.recordingStream = null;
         this.currentMouth = 'silence';
+        
+        // Novo: Armazenar as imagens SVG das bocas
+        this.mouthImages = {};
+        this.svgsLoaded = false;
+        
         this.initializeElements();
         this.setupEventListeners();
         this.setupAudioContext();
         this.setupCanvas();
-        this.drawCharacterOnCanvas('silence');
+        this.loadMouthSVGs(); // Carregar SVGs na inicialização
     }
 
     initializeElements() {
@@ -65,6 +70,83 @@ class LipSyncApp {
         this.ctx = this.elements.previewCanvas.getContext('2d');
     }
 
+    // Novo método: Carregar os SVGs das bocas
+    async loadMouthSVGs() {
+        this.updateStatus('Carregando recursos...', 'info');
+        
+        // Mapeamento baseado na sua tabela
+        const svgMapping = {
+            'silence': 'BMP.svg',
+            'a': 'A.svg',
+            'e': 'E.svg',
+            'i': 'FVI.svg',
+            'o': 'O.svg',
+            'u': 'U.svg',
+            'm': 'BMP.svg',
+            'p': 'BMP.svg',
+            'b': 'BMP.svg',
+            'ch': 'CDGKNSTXYZ.svg',
+            'sh': 'CDGKNSTXYZ.svg',
+            'j': 'CDGKNSTXYZ.svg',
+            'r': 'R.svg',
+            'l': 'L.svg',
+            't': 'CDGKNSTXYZ.svg',
+            'd': 'CDGKNSTXYZ.svg',
+            'c': 'CDGKNSTXYZ.svg',
+            'g': 'CDGKNSTXYZ.svg',
+            'k': 'CDGKNSTXYZ.svg',
+            'n': 'CDGKNSTXYZ.svg',
+            's': 'CDGKNSTXYZ.svg',
+            'x': 'CDGKNSTXYZ.svg',
+            'y': 'CDGKNSTXYZ.svg',
+            'z': 'CDGKNSTXYZ.svg',
+            'f': 'FVI.svg',
+            'v': 'FVI.svg',
+            'q': 'Q.svg'
+        };
+
+        // Carregar apenas os arquivos únicos
+        const uniqueFiles = [...new Set(Object.values(svgMapping))];
+        const fileToImageMap = {};
+
+        try {
+            for (const filename of uniqueFiles) {
+                const response = await fetch(`bocas/${filename}`);
+                if (!response.ok) {
+                    throw new Error(`Falha ao carregar ${filename}`);
+                }
+                
+                const svgText = await response.text();
+                const img = new Image();
+                const blob = new Blob([svgText], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = url;
+                });
+                
+                fileToImageMap[filename] = img;
+                URL.revokeObjectURL(url);
+            }
+
+            // Mapear fonemas para imagens carregadas
+            for (const [phoneme, filename] of Object.entries(svgMapping)) {
+                this.mouthImages[phoneme] = fileToImageMap[filename];
+            }
+
+            this.svgsLoaded = true;
+            this.updateStatus('Pronto para começar');
+            this.drawCharacterOnCanvas('silence'); // Desenhar estado inicial
+            
+        } catch (error) {
+            console.error('Erro ao carregar SVGs:', error);
+            this.updateStatus('Erro ao carregar recursos das bocas', 'error');
+            this.svgsLoaded = false;
+        }
+    }
+
     updateStatus(message, type = 'info') {
         this.elements.status.textContent = message;
         this.elements.status.className = `status status-${type}`;
@@ -92,7 +174,14 @@ class LipSyncApp {
                     this.updateStatus('Áudio carregado com sucesso!');
                     this.elements.audioInfo.style.display = 'block';
                     this.elements.audioInfo.textContent = `Arquivo: ${file.name} | Duração: ${this.duration.toFixed(2)}s`;
-                    this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: false });
+                    this.updateButtonStates({ 
+                        play: this.svgsLoaded, 
+                        pause: false, 
+                        record: true, 
+                        stop: false, 
+                        generate: this.svgsLoaded, 
+                        download: false 
+                    });
                 }, error => {
                     this.updateStatus('Erro ao decodificar áudio.', 'error');
                     console.error('Error decoding audio:', error);
@@ -130,7 +219,14 @@ class LipSyncApp {
                         this.updateStatus('Gravação concluída!');
                         this.elements.audioInfo.style.display = 'block';
                         this.elements.audioInfo.textContent = `Gravação concluída | Duração: ${this.duration.toFixed(2)}s`;
-                        this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: false });
+                        this.updateButtonStates({ 
+                            play: this.svgsLoaded, 
+                            pause: false, 
+                            record: true, 
+                            stop: false, 
+                            generate: this.svgsLoaded, 
+                            download: false 
+                        });
                     } catch (err) {
                         this.updateStatus('Erro ao decodificar a gravação.', 'error');
                         console.error('Error decoding recorded audio:', err);
@@ -153,7 +249,7 @@ class LipSyncApp {
     }
 
     playAudio() {
-        if (!this.audioBuffer) return;
+        if (!this.audioBuffer || !this.svgsLoaded) return;
         this.updateStatus('Reproduzindo...');
         this.updateButtonStates({ play: false, pause: true, record: false, stop: false, generate: false, download: false });
 
@@ -172,6 +268,7 @@ class LipSyncApp {
             if (!this.isRecordingVideo) {
                 this.updateStatus('Pronto para começar');
                 this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: true });
+                this.drawCharacterOnCanvas('silence'); // Voltar ao estado de silêncio
             }
         };
 
@@ -189,6 +286,7 @@ class LipSyncApp {
         cancelAnimationFrame(this.animationFrameId);
         this.updateStatus('Pausado');
         this.updateButtonStates({ play: true, pause: false, record: false, stop: false, generate: true, download: false });
+        this.drawCharacterOnCanvas('silence'); // Mostrar silêncio quando pausado
     }
 
     /** --- Centralização da lógica de fonemas --- **/
@@ -230,74 +328,38 @@ class LipSyncApp {
         this.animationFrameId = requestAnimationFrame(() => this.animate());
     }
 
+    // Método completamente reescrito - apenas desenha a boca SVG
     drawCharacterOnCanvas(mouthShape) {
+        if (!this.svgsLoaded) {
+            return; // Não desenha nada se os SVGs não estão carregados
+        }
+
         const canvas = this.elements.previewCanvas;
         const ctx = this.ctx;
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-
+        
+        // Limpar canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // Desenhar background se necessário
         if (this.backgroundType === 'green') {
             ctx.fillStyle = '#00ff00';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Cabeça
-        ctx.fillStyle = '#fce5c8';
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - 20, 60, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#c8a687';
-        ctx.lineWidth = 3;
-        ctx.stroke();
+        // Desenhar apenas a boca SVG
+        const mouthImage = this.mouthImages[mouthShape] || this.mouthImages['silence'];
+        if (mouthImage) {
+            // Centralizar a boca no canvas
+            const mouthWidth = 200; // Ajuste conforme necessário
+            const mouthHeight = 150; // Ajuste conforme necessário
+            const x = (canvas.width - mouthWidth) / 2;
+            const y = (canvas.height - mouthHeight) / 2;
+            
+            ctx.drawImage(mouthImage, x, y, mouthWidth, mouthHeight);
+        }
 
-        // Olhos
-        ctx.fillStyle = 'white';
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(centerX - 30, centerY - 35, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.arc(centerX + 30, centerY - 35, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-        // Pupilas
-        ctx.fillStyle = '#333';
-        ctx.beginPath(); ctx.arc(centerX - 30, centerY - 35, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(centerX + 30, centerY - 35, 7, 0, Math.PI * 2); ctx.fill();
-
-        // Nariz
-        ctx.fillStyle = '#d4ac78';
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - 10, 4, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Boca
-        const mouthX = centerX;
-        const mouthY = centerY + 20;
-
-        const mouthShapes = {
-            a: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY, 12, 17, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
-            e: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY, 17, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
-            i: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY, 10, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
-            o: () => { ctx.beginPath(); ctx.arc(mouthX, mouthY, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
-            u: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY, 15, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
-            m: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY + 5, 20, 10, 0, 0, Math.PI, true); ctx.lineTo(mouthX - 20, mouthY + 5); ctx.closePath(); ctx.stroke(); },
-            p: () => mouthShapes.m(),
-            b: () => mouthShapes.m(),
-            ch: () => { ctx.beginPath(); ctx.rect(mouthX - 15, mouthY - 5, 30, 15); ctx.fill(); ctx.stroke(); },
-            sh: () => mouthShapes.ch(),
-            j: () => mouthShapes.ch(),
-            r: () => { ctx.beginPath(); ctx.moveTo(mouthX - 25, mouthY); ctx.quadraticCurveTo(mouthX, mouthY + 25, mouthX + 25, mouthY); ctx.fill(); ctx.stroke(); },
-            l: () => mouthShapes.r(),
-            t: () => { ctx.beginPath(); ctx.moveTo(mouthX - 15, mouthY); ctx.lineTo(mouthX + 15, mouthY); ctx.stroke(); },
-            d: () => mouthShapes.t(),
-            silence: () => { ctx.beginPath(); ctx.arc(mouthX, mouthY, 15, 0, Math.PI, false); ctx.stroke(); }
-        };
-
-        ctx.fillStyle = '#2c1810';
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 2;
-
-        (mouthShapes[mouthShape] || mouthShapes.silence)();
+        // Armazenar a boca atual para referência
+        this.currentMouth = mouthShape;
     }
 
     handleBackgroundChange(event) {
@@ -305,9 +367,17 @@ class LipSyncApp {
         const selectedOption = event.currentTarget;
         selectedOption.classList.add('active');
         this.backgroundType = selectedOption.dataset.bg;
+        
+        // Redesenhar com o novo background
+        this.drawCharacterOnCanvas(this.currentMouth);
     }
 
     async generateVideo() {
+        if (!this.svgsLoaded) {
+            this.updateStatus('Aguarde o carregamento dos recursos', 'error');
+            return;
+        }
+
         this.updateStatus('Gerando vídeo...', 'info');
         this.updateButtonStates({ play: false, pause: false, record: false, stop: false, generate: false, download: false });
         this.isRecordingVideo = true;
