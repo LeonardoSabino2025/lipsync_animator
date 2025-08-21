@@ -289,25 +289,174 @@ class LipSyncApp {
         this.drawCharacterOnCanvas('silence'); // Mostrar silêncio quando pausado
     }
 
-    /** --- Centralização da lógica de fonemas --- **/
+    /** --- Análise aprimorada de fonemas --- **/
     getPhonemeFromData(dataArray) {
-        let average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        const lowFreq = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / 4;
-        const midLowFreq = (dataArray[4] + dataArray[5] + dataArray[6] + dataArray[7]) / 4;
-        const midFreq = (dataArray[8] + dataArray[9] + dataArray[10] + dataArray[11]) / 4;
-        const highFreq = (dataArray[12] + dataArray[13] + dataArray[14] + dataArray[15]) / 4;
+        // Calcular médias de diferentes faixas de frequência
+        const totalEnergy = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        
+        // Dividir o espectro em mais faixas para melhor análise
+        const veryLowFreq = this.getFreqAverage(dataArray, 0, 3);      // 0-3: Sons graves profundos
+        const lowFreq = this.getFreqAverage(dataArray, 4, 8);          // 4-8: Sons graves
+        const lowMidFreq = this.getFreqAverage(dataArray, 9, 16);      // 9-16: Frequências médias-baixas
+        const midFreq = this.getFreqAverage(dataArray, 17, 32);        // 17-32: Frequências médias
+        const midHighFreq = this.getFreqAverage(dataArray, 33, 64);    // 33-64: Frequências médias-altas
+        const highFreq = this.getFreqAverage(dataArray, 65, 100);      // 65-100: Frequências altas
+        const veryHighFreq = this.getFreqAverage(dataArray, 101, 127); // 101-127: Frequências muito altas
 
-        if (average < 25) return 'silence';
-        if (highFreq > 50 && midFreq > 50) return 'ch';
-        if (midLowFreq > 45 && midFreq > 40) return 'r';
-        if (midFreq > 35 && average > 35) return 't';
-        if (lowFreq > midFreq && lowFreq > 40) return 'm';
-        if (lowFreq > 50 && midLowFreq > 40) return Math.random() > 0.6 ? 'a' : 'o';
-        if (highFreq > 35 && midFreq > 30) return Math.random() > 0.5 ? 'e' : 'i';
-        if (lowFreq > 35 && highFreq < 25) return 'u';
+        // Detectar silêncio
+        if (totalEnergy < 20) return 'silence';
 
-        const vowels = ['a', 'e', 'i', 'o', 'u'];
-        return vowels[Math.floor(Math.random() * vowels.length)];
+        // Calcular ratios para identificar padrões específicos
+        const lowToMidRatio = lowFreq / (midFreq + 1);
+        const highToMidRatio = highFreq / (midFreq + 1);
+        const energySpread = this.calculateSpread(dataArray);
+        
+        // Sistema de pontuação para cada fonema
+        const scores = {
+            'a': 0,    // A.svg
+            'e': 0,    // E.svg  
+            'i': 0,    // FVI.svg
+            'o': 0,    // O.svg
+            'u': 0,    // U.svg
+            'm': 0,    // BMP.svg
+            'r': 0,    // R.svg
+            'l': 0,    // L.svg
+            'ch': 0,   // CDGKNSTXYZ.svg
+            'q': 0     // Q.svg
+        };
+
+        // VOGAL A - Frequências baixas-médias dominantes, abertura ampla
+        if (lowFreq > 40 && midFreq > 35 && lowToMidRatio > 0.8) {
+            scores['a'] += 3;
+        }
+        if (lowFreq > midHighFreq && totalEnergy > 35) {
+            scores['a'] += 2;
+        }
+
+        // VOGAL E - Frequências médias-altas, mais fechada que A
+        if (midFreq > 40 && midHighFreq > 30 && highToMidRatio < 1.2) {
+            scores['e'] += 3;
+        }
+        if (midFreq > lowFreq && midHighFreq > lowFreq) {
+            scores['e'] += 2;
+        }
+
+        // VOGAL I - Frequências altas, boca mais fechada
+        if (highFreq > 45 && midHighFreq > 40) {
+            scores['i'] += 3;
+        }
+        if (highFreq > lowFreq * 1.5 && veryHighFreq > 25) {
+            scores['i'] += 2;
+        }
+
+        // VOGAL O - Frequências baixas dominantes, som arredondado
+        if (lowFreq > 50 && veryLowFreq > 30 && highFreq < 35) {
+            scores['o'] += 3;
+        }
+        if (lowToMidRatio > 1.3 && totalEnergy > 30) {
+            scores['o'] += 2;
+        }
+
+        // VOGAL U - Muito grave, boca bem fechada
+        if (veryLowFreq > 45 && lowFreq > 40 && highFreq < 25) {
+            scores['u'] += 3;
+        }
+        if (lowFreq > midFreq * 1.5 && highToMidRatio < 0.7) {
+            scores['u'] += 2;
+        }
+
+        // SOM M/B/P - Sons labiais, frequências baixas concentradas
+        if (lowFreq > 35 && midFreq < 30 && energySpread < 0.6) {
+            scores['m'] += 3;
+        }
+        if (veryLowFreq > lowFreq * 0.8 && highFreq < 30) {
+            scores['m'] += 2;
+        }
+
+        // SOM R - Vibração, frequências médias-baixas com modulação
+        if (lowMidFreq > 40 && midFreq > 35 && energySpread > 0.7) {
+            scores['r'] += 3;
+        }
+        if (lowMidFreq > highFreq && totalEnergy > 40) {
+            scores['r'] += 2;
+        }
+
+        // SOM L - Lateral, frequências médias distribuídas
+        if (midFreq > 35 && lowMidFreq > 30 && energySpread > 0.5 && energySpread < 0.9) {
+            scores['l'] += 3;
+        }
+        if (midFreq > lowFreq && midFreq > highFreq) {
+            scores['l'] += 1;
+        }
+
+        // SONS CH/SH/Consoantes - Frequências altas, ruído
+        if (highFreq > 50 && veryHighFreq > 35) {
+            scores['ch'] += 3;
+        }
+        if (midHighFreq > 45 && energySpread > 0.8) {
+            scores['ch'] += 2;
+        }
+        if (highToMidRatio > 1.5) {
+            scores['ch'] += 1;
+        }
+
+        // SOM Q - Frequências médias com pico específico
+        if (midFreq > 45 && lowMidFreq > 35 && highFreq > 30 && highFreq < 50) {
+            scores['q'] += 3;
+        }
+        if (midFreq > lowFreq && midFreq > highFreq && totalEnergy > 35) {
+            scores['q'] += 1;
+        }
+
+        // Encontrar o fonema com maior pontuação
+        let maxScore = 0;
+        let detectedPhoneme = 'silence';
+        
+        for (const [phoneme, score] of Object.entries(scores)) {
+            if (score > maxScore) {
+                maxScore = score;
+                detectedPhoneme = phoneme;
+            }
+        }
+
+        // Se nenhum fonema teve pontuação suficiente, usar lógica de fallback
+        if (maxScore < 2) {
+            if (totalEnergy < 25) return 'silence';
+            if (lowFreq > midFreq && lowFreq > highFreq) return Math.random() > 0.5 ? 'o' : 'u';
+            if (highFreq > midFreq && highFreq > lowFreq) return Math.random() > 0.5 ? 'i' : 'ch';
+            if (midFreq > lowFreq && midFreq > highFreq) return Math.random() > 0.5 ? 'e' : 'l';
+            return ['a', 'e', 'i', 'o', 'u'][Math.floor(Math.random() * 5)];
+        }
+
+        return detectedPhoneme;
+    }
+
+    // Método auxiliar para calcular média de frequência em uma faixa
+    getFreqAverage(dataArray, start, end) {
+        const validEnd = Math.min(end, dataArray.length - 1);
+        const validStart = Math.max(0, start);
+        let sum = 0;
+        let count = 0;
+        
+        for (let i = validStart; i <= validEnd; i++) {
+            sum += dataArray[i];
+            count++;
+        }
+        
+        return count > 0 ? sum / count : 0;
+    }
+
+    // Método auxiliar para calcular dispersão da energia
+    calculateSpread(dataArray) {
+        const mean = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        let variance = 0;
+        
+        for (let i = 0; i < dataArray.length; i++) {
+            variance += Math.pow(dataArray[i] - mean, 2);
+        }
+        
+        const stdDev = Math.sqrt(variance / dataArray.length);
+        return stdDev / (mean + 1); // Normalizar pela média
     }
 
     animate() {
