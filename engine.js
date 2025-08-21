@@ -92,7 +92,7 @@ class LipSyncApp {
                     this.updateStatus('Áudio carregado com sucesso!');
                     this.elements.audioInfo.style.display = 'block';
                     this.elements.audioInfo.textContent = `Arquivo: ${file.name} | Duração: ${this.duration.toFixed(2)}s`;
-                    this.updateButtonStates({ play: true, pause: false, record: false, stop: false, generate: true, download: false });
+                    this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: false });
                 }, error => {
                     this.updateStatus('Erro ao decodificar áudio.', 'error');
                     console.error('Error decoding audio:', error);
@@ -106,31 +106,37 @@ class LipSyncApp {
         if (!this.audioContext) this.setupAudioContext();
         this.updateStatus('Gravando áudio...');
         this.updateButtonStates({ play: false, pause: false, record: false, stop: true, generate: false, download: false });
+
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
                 this.recordingStream = stream;
                 this.mediaRecorder = new MediaRecorder(stream);
                 this.recordedChunks = [];
+
                 this.mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) {
                         this.recordedChunks.push(event.data);
                     }
                 };
-                this.mediaRecorder.onstop = () => {
+
+                this.mediaRecorder.onstop = async () => {
                     const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
-                    const audioURL = URL.createObjectURL(blob);
-                    this.audioContext.decodeAudioData(e.target.result, buffer => {
+                    const arrayBuffer = await blob.arrayBuffer();
+
+                    try {
+                        const buffer = await this.audioContext.decodeAudioData(arrayBuffer);
                         this.audioBuffer = buffer;
                         this.duration = buffer.duration;
                         this.updateStatus('Gravação concluída!');
                         this.elements.audioInfo.style.display = 'block';
                         this.elements.audioInfo.textContent = `Gravação concluída | Duração: ${this.duration.toFixed(2)}s`;
                         this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: false });
-                    }, error => {
+                    } catch (err) {
                         this.updateStatus('Erro ao decodificar a gravação.', 'error');
-                        console.error('Error decoding recorded audio:', error);
-                    });
+                        console.error('Error decoding recorded audio:', err);
+                    }
                 };
+
                 this.mediaRecorder.start();
             })
             .catch(error => {
@@ -165,7 +171,7 @@ class LipSyncApp {
         this.source.onended = () => {
             if (!this.isRecordingVideo) {
                 this.updateStatus('Pronto para começar');
-                this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: false });
+                this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: true });
             }
         };
 
@@ -185,6 +191,27 @@ class LipSyncApp {
         this.updateButtonStates({ play: true, pause: false, record: false, stop: false, generate: true, download: false });
     }
 
+    /** --- Centralização da lógica de fonemas --- **/
+    getPhonemeFromData(dataArray) {
+        let average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        const lowFreq = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / 4;
+        const midLowFreq = (dataArray[4] + dataArray[5] + dataArray[6] + dataArray[7]) / 4;
+        const midFreq = (dataArray[8] + dataArray[9] + dataArray[10] + dataArray[11]) / 4;
+        const highFreq = (dataArray[12] + dataArray[13] + dataArray[14] + dataArray[15]) / 4;
+
+        if (average < 25) return 'silence';
+        if (highFreq > 50 && midFreq > 50) return 'ch';
+        if (midLowFreq > 45 && midFreq > 40) return 'r';
+        if (midFreq > 35 && average > 35) return 't';
+        if (lowFreq > midFreq && lowFreq > 40) return 'm';
+        if (lowFreq > 50 && midLowFreq > 40) return Math.random() > 0.6 ? 'a' : 'o';
+        if (highFreq > 35 && midFreq > 30) return Math.random() > 0.5 ? 'e' : 'i';
+        if (lowFreq > 35 && highFreq < 25) return 'u';
+
+        const vowels = ['a', 'e', 'i', 'o', 'u'];
+        return vowels[Math.floor(Math.random() * vowels.length)];
+    }
+
     animate() {
         if (!this.isPlaying) {
             cancelAnimationFrame(this.animationFrameId);
@@ -194,101 +221,13 @@ class LipSyncApp {
         const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(dataArray);
 
-        let average = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-            average += dataArray[i];
-        }
-        average = average / dataArray.length;
-
-        const lowFreq = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / 4;
-        const midLowFreq = (dataArray[4] + dataArray[5] + dataArray[6] + dataArray[7]) / 4;
-        const midFreq = (dataArray[8] + dataArray[9] + dataArray[10] + dataArray[11]) / 4;
-        const highFreq = (dataArray[12] + dataArray[13] + dataArray[14] + dataArray[15]) / 4;
-        
-        let phoneme = 'silence';
-
-        if (average < 25) {
-            phoneme = 'silence';
-        } else {
-            if (highFreq > 50 && midFreq > 50) {
-                phoneme = 'ch';
-            } else if (midLowFreq > 45 && midFreq > 40) {
-                phoneme = 'r';
-            } else if (midFreq > 35 && average > 35) {
-                phoneme = 't';
-            } else if (lowFreq > midFreq && lowFreq > 40) {
-                phoneme = 'm';
-            } else {
-                if (lowFreq > 50 && midLowFreq > 40) {
-                    phoneme = Math.random() > 0.6 ? 'a' : 'o';
-                } else if (highFreq > 35 && midFreq > 30) {
-                    phoneme = Math.random() > 0.5 ? 'e' : 'i';
-                } else if (lowFreq > 35 && highFreq < 25) {
-                    phoneme = 'u';
-                } else {
-                    const vowels = ['a', 'e', 'i', 'o', 'u'];
-                    phoneme = vowels[Math.floor(Math.random() * vowels.length)];
-                }
-            }
-        }
-        
+        const phoneme = this.getPhonemeFromData(dataArray);
         this.drawCharacterOnCanvas(phoneme);
-        this.elements.progressBar.style.width = `${((this.audioContext.currentTime - this.startTime) / this.duration) * 100}%`;
+
+        const progress = ((this.audioContext.currentTime - this.startTime) / this.duration) * 100;
+        this.elements.progressBar.style.width = `${Math.min(progress, 100)}%`;
+
         this.animationFrameId = requestAnimationFrame(() => this.animate());
-    }
-
-    animateForVideo() {
-        if (!this.isRecordingVideo) {
-            cancelAnimationFrame(this.animationFrameId);
-            return;
-        }
-        
-        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-        this.analyser.getByteFrequencyData(dataArray);
-
-        let average = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-            average += dataArray[i];
-        }
-        average = average / dataArray.length;
-        
-        const lowFreq = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / 4;
-        const midLowFreq = (dataArray[4] + dataArray[5] + dataArray[6] + dataArray[7]) / 4;
-        const midFreq = (dataArray[8] + dataArray[9] + dataArray[10] + dataArray[11]) / 4;
-        const highFreq = (dataArray[12] + dataArray[13] + dataArray[14] + dataArray[15]) / 4;
-
-        let phoneme = 'silence';
-
-        if (average < 25) {
-            phoneme = 'silence';
-        } else {
-            if (highFreq > 50 && midFreq > 50) {
-                phoneme = 'ch';
-            } else if (midLowFreq > 45 && midFreq > 40) {
-                phoneme = 'r';
-            } else if (midFreq > 35 && average > 35) {
-                phoneme = 't';
-            } else if (lowFreq > midFreq && lowFreq > 40) {
-                phoneme = 'm';
-            } else {
-                if (lowFreq > 50 && midLowFreq > 40) {
-                    phoneme = Math.random() > 0.6 ? 'a' : 'o';
-                } else if (highFreq > 35 && midFreq > 30) {
-                    phoneme = Math.random() > 0.5 ? 'e' : 'i';
-                } else if (lowFreq > 35 && highFreq < 25) {
-                    phoneme = 'u';
-                } else {
-                    const vowels = ['a', 'e', 'i', 'o', 'u'];
-                    phoneme = vowels[Math.floor(Math.random() * vowels.length)];
-                }
-            }
-        }
-
-        this.drawCharacterOnCanvas(phoneme);
-        
-        if (this.mediaRecorderVideo) {
-            this.animationFrameId = requestAnimationFrame(() => this.animateForVideo());
-        }
     }
 
     drawCharacterOnCanvas(mouthShape) {
@@ -297,16 +236,14 @@ class LipSyncApp {
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
 
-        // Limpar o canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Definir cor de fundo (verde ou transparente)
         if (this.backgroundType === 'green') {
             ctx.fillStyle = '#00ff00';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Desenhar a cabeça
+        // Cabeça
         ctx.fillStyle = '#fce5c8';
         ctx.beginPath();
         ctx.arc(centerX, centerY - 20, 60, 0, Math.PI * 2);
@@ -315,119 +252,52 @@ class LipSyncApp {
         ctx.lineWidth = 3;
         ctx.stroke();
 
-        // Desenhar os olhos
+        // Olhos
         ctx.fillStyle = 'white';
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(centerX - 30, centerY - 35, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(centerX + 30, centerY - 35, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-        // Olho esquerdo
-        ctx.beginPath();
-        ctx.arc(centerX - 30, centerY - 35, 15, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Olho direito
-        ctx.beginPath();
-        ctx.arc(centerX + 30, centerY - 35, 15, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Pupila esquerda
+        // Pupilas
         ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.arc(centerX - 30, centerY - 35, 7, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(centerX - 30, centerY - 35, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(centerX + 30, centerY - 35, 7, 0, Math.PI * 2); ctx.fill();
 
-        // Pupila direita
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.arc(centerX + 30, centerY - 35, 7, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Desenhar nariz
+        // Nariz
         ctx.fillStyle = '#d4ac78';
         ctx.beginPath();
         ctx.arc(centerX, centerY - 10, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Desenhar boca
-        ctx.fillStyle = '#2c1810';
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 2;
-        
+        // Boca
         const mouthX = centerX;
         const mouthY = centerY + 20;
 
-        switch(mouthShape) {
-            case 'a':
-                ctx.beginPath();
-                ctx.ellipse(mouthX, mouthY, 12, 17, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                break;
-            case 'e':
-                ctx.beginPath();
-                ctx.ellipse(mouthX, mouthY, 17, 10, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                break;
-            case 'i':
-                ctx.beginPath();
-                ctx.ellipse(mouthX, mouthY, 10, 20, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                break;
-            case 'o':
-                ctx.beginPath();
-                ctx.arc(mouthX, mouthY, 15, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                break;
-            case 'u':
-                ctx.beginPath();
-                ctx.ellipse(mouthX, mouthY, 15, 12, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                break;
-            case 'm':
-            case 'p':
-            case 'b':
-                ctx.beginPath();
-                ctx.ellipse(mouthX, mouthY + 5, 20, 10, 0, 0, Math.PI, true);
-                ctx.lineTo(mouthX - 20, mouthY + 5);
-                ctx.closePath();
-                ctx.stroke();
-                break;
-            case 'ch':
-            case 'sh':
-            case 'j':
-                ctx.beginPath();
-                ctx.rect(mouthX - 15, mouthY - 5, 30, 15);
-                ctx.fill();
-                ctx.stroke();
-                break;
-            case 'r':
-            case 'l':
-                ctx.beginPath();
-                ctx.moveTo(mouthX - 25, mouthY);
-                ctx.quadraticCurveTo(mouthX, mouthY + 25, mouthX + 25, mouthY);
-                ctx.fill();
-                ctx.stroke();
-                break;
-            case 't':
-            case 'd':
-                ctx.beginPath();
-                ctx.moveTo(mouthX - 15, mouthY);
-                ctx.lineTo(mouthX + 15, mouthY);
-                ctx.stroke();
-                break;
-            case 'silence':
-            default:
-                ctx.beginPath();
-                ctx.arc(mouthX, mouthY, 15, 0, Math.PI, false);
-                ctx.stroke();
-                break;
-        }
+        const mouthShapes = {
+            a: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY, 12, 17, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
+            e: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY, 17, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
+            i: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY, 10, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
+            o: () => { ctx.beginPath(); ctx.arc(mouthX, mouthY, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
+            u: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY, 15, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); },
+            m: () => { ctx.beginPath(); ctx.ellipse(mouthX, mouthY + 5, 20, 10, 0, 0, Math.PI, true); ctx.lineTo(mouthX - 20, mouthY + 5); ctx.closePath(); ctx.stroke(); },
+            p: () => mouthShapes.m(),
+            b: () => mouthShapes.m(),
+            ch: () => { ctx.beginPath(); ctx.rect(mouthX - 15, mouthY - 5, 30, 15); ctx.fill(); ctx.stroke(); },
+            sh: () => mouthShapes.ch(),
+            j: () => mouthShapes.ch(),
+            r: () => { ctx.beginPath(); ctx.moveTo(mouthX - 25, mouthY); ctx.quadraticCurveTo(mouthX, mouthY + 25, mouthX + 25, mouthY); ctx.fill(); ctx.stroke(); },
+            l: () => mouthShapes.r(),
+            t: () => { ctx.beginPath(); ctx.moveTo(mouthX - 15, mouthY); ctx.lineTo(mouthX + 15, mouthY); ctx.stroke(); },
+            d: () => mouthShapes.t(),
+            silence: () => { ctx.beginPath(); ctx.arc(mouthX, mouthY, 15, 0, Math.PI, false); ctx.stroke(); }
+        };
+
+        ctx.fillStyle = '#2c1810';
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 2;
+
+        (mouthShapes[mouthShape] || mouthShapes.silence)();
     }
 
     handleBackgroundChange(event) {
@@ -442,7 +312,7 @@ class LipSyncApp {
         this.updateButtonStates({ play: false, pause: false, record: false, stop: false, generate: false, download: false });
         this.isRecordingVideo = true;
         this.pauseTime = 0;
-        
+
         const stream = this.elements.previewCanvas.captureStream(30);
         this.mediaRecorderVideo = new MediaRecorder(stream, { mimeType: 'video/webm' });
         this.videoFrames = [];
@@ -461,8 +331,6 @@ class LipSyncApp {
         };
 
         this.mediaRecorderVideo.start();
-        
-        // Inicia a animação para o vídeo
         this.playAudio();
     }
 
