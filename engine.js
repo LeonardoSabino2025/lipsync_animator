@@ -1,297 +1,485 @@
- {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+class LipSyncApp {
+    constructor() {
+        this.audioContext = null;
+        this.audioBuffer = null;
+        this.source = null;
+        this.analyser = null;
+        this.isPlaying = false;
+        this.mediaRecorder = null;
+        this.recordedChunks = [];
+        this.animationFrameId = null;
+        this.startTime = 0;
+        this.pauseTime = 0;
+        this.duration = 0;
+        this.backgroundType = 'green';
+        this.isRecordingVideo = false;
+        this.videoFrames = [];
+        this.mediaRecorderVideo = null;
+        this.recordingStream = null;
+        this.currentMouth = 'silence';
+        this.initializeElements();
+        this.setupEventListeners();
+        this.setupAudioContext();
+        this.setupCanvas();
+        this.drawCharacterOnCanvas('silence');
+    }
 
-body {
-    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-    min-height: 100vh;
-    padding: 20px;
-    color: #333;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+    initializeElements() {
+        this.elements = {
+            audioFile: document.getElementById('audioFile'),
+            recordBtn: document.getElementById('recordBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            playBtn: document.getElementById('playBtn'),
+            pauseBtn: document.getElementById('pauseBtn'),
+            audioInfo: document.getElementById('audioInfo'),
+            progressBar: document.getElementById('progressBar'),
+            previewCanvas: document.getElementById('previewCanvas'),
+            backgroundOptions: document.querySelectorAll('.bg-option'),
+            generateBtn: document.getElementById('generateBtn'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            status: document.getElementById('status'),
+            fileInputLabel: document.querySelector('.file-input-label')
+        };
+    }
 
-.container {
-    max-width: 1200px;
-    width: 100%;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-}
+    setupEventListeners() {
+        this.elements.audioFile.addEventListener('change', this.handleFileSelect.bind(this));
+        this.elements.recordBtn.addEventListener('click', this.startRecording.bind(this));
+        this.elements.stopBtn.addEventListener('click', this.stopRecording.bind(this));
+        this.elements.playBtn.addEventListener('click', this.playAudio.bind(this));
+        this.elements.pauseBtn.addEventListener('click', this.pauseAudio.bind(this));
+        this.elements.generateBtn.addEventListener('click', this.generateVideo.bind(this));
+        this.elements.downloadBtn.addEventListener('click', this.downloadVideo.bind(this));
+        this.elements.backgroundOptions.forEach(option => {
+            option.addEventListener('click', this.handleBackgroundChange.bind(this));
+        });
+    }
 
-.header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 30px;
-    text-align: center;
-}
+    setupAudioContext() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
 
-.header h1 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-}
+    setupCanvas() {
+        this.ctx = this.elements.previewCanvas.getContext('2d');
+    }
 
-.header p {
-    font-size: 1.2rem;
-    opacity: 0.9;
-}
+    updateStatus(message, type = 'info') {
+        this.elements.status.textContent = message;
+        this.elements.status.className = `status status-${type}`;
+    }
 
-.content {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    padding: 30px;
-}
+    updateButtonStates(state) {
+        this.elements.playBtn.disabled = !state.play;
+        this.elements.pauseBtn.disabled = !state.pause;
+        this.elements.recordBtn.disabled = !state.record;
+        this.elements.stopBtn.disabled = !state.stop;
+        this.elements.generateBtn.disabled = !state.generate;
+        this.elements.downloadBtn.disabled = !state.download;
+    }
 
-@media (max-width: 900px) {
-    .content {
-        grid-template-columns: 1fr;
+    handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+            this.updateStatus('Carregando áudio...');
+            this.elements.fileInputLabel.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = e => {
+                this.audioContext.decodeAudioData(e.target.result, buffer => {
+                    this.audioBuffer = buffer;
+                    this.duration = buffer.duration;
+                    this.updateStatus('Áudio carregado com sucesso!');
+                    this.elements.audioInfo.style.display = 'block';
+                    this.elements.audioInfo.textContent = `Arquivo: ${file.name} | Duração: ${this.duration.toFixed(2)}s`;
+                    this.updateButtonStates({ play: true, pause: false, record: false, stop: false, generate: true, download: false });
+                }, error => {
+                    this.updateStatus('Erro ao decodificar áudio.', 'error');
+                    console.error('Error decoding audio:', error);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    }
+
+    startRecording() {
+        if (!this.audioContext) this.setupAudioContext();
+        this.updateStatus('Gravando áudio...');
+        this.updateButtonStates({ play: false, pause: false, record: false, stop: true, generate: false, download: false });
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                this.recordingStream = stream;
+                this.mediaRecorder = new MediaRecorder(stream);
+                this.recordedChunks = [];
+                this.mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        this.recordedChunks.push(event.data);
+                    }
+                };
+                this.mediaRecorder.onstop = () => {
+                    const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
+                    const audioURL = URL.createObjectURL(blob);
+                    this.audioContext.decodeAudioData(e.target.result, buffer => {
+                        this.audioBuffer = buffer;
+                        this.duration = buffer.duration;
+                        this.updateStatus('Gravação concluída!');
+                        this.elements.audioInfo.style.display = 'block';
+                        this.elements.audioInfo.textContent = `Gravação concluída | Duração: ${this.duration.toFixed(2)}s`;
+                        this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: false });
+                    }, error => {
+                        this.updateStatus('Erro ao decodificar a gravação.', 'error');
+                        console.error('Error decoding recorded audio:', error);
+                    });
+                };
+                this.mediaRecorder.start();
+            })
+            .catch(error => {
+                this.updateStatus('Permissão para microfone negada.', 'error');
+                console.error('Error accessing microphone:', error);
+            });
+    }
+
+    stopRecording() {
+        if (this.mediaRecorder) {
+            this.mediaRecorder.stop();
+            this.recordingStream.getTracks().forEach(track => track.stop());
+        }
+    }
+
+    playAudio() {
+        if (!this.audioBuffer) return;
+        this.updateStatus('Reproduzindo...');
+        this.updateButtonStates({ play: false, pause: true, record: false, stop: false, generate: false, download: false });
+
+        if (this.source) {
+            this.source.stop();
+        }
+
+        this.source = this.audioContext.createBufferSource();
+        this.source.buffer = this.audioBuffer;
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 256;
+        this.source.connect(this.analyser);
+        this.analyser.connect(this.audioContext.destination);
+
+        this.source.onended = () => {
+            if (!this.isRecordingVideo) {
+                this.updateStatus('Pronto para começar');
+                this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: false });
+            }
+        };
+
+        this.startTime = this.audioContext.currentTime - this.pauseTime;
+        this.source.start(0, this.pauseTime);
+        this.isPlaying = true;
+        this.animate();
+    }
+
+    pauseAudio() {
+        if (!this.isPlaying) return;
+        this.source.stop();
+        this.pauseTime = this.audioContext.currentTime - this.startTime;
+        this.isPlaying = false;
+        cancelAnimationFrame(this.animationFrameId);
+        this.updateStatus('Pausado');
+        this.updateButtonStates({ play: true, pause: false, record: false, stop: false, generate: true, download: false });
+    }
+
+    animate() {
+        if (!this.isPlaying) {
+            cancelAnimationFrame(this.animationFrameId);
+            return;
+        }
+
+        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(dataArray);
+
+        let average = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            average += dataArray[i];
+        }
+        average = average / dataArray.length;
+
+        const lowFreq = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / 4;
+        const midLowFreq = (dataArray[4] + dataArray[5] + dataArray[6] + dataArray[7]) / 4;
+        const midFreq = (dataArray[8] + dataArray[9] + dataArray[10] + dataArray[11]) / 4;
+        const highFreq = (dataArray[12] + dataArray[13] + dataArray[14] + dataArray[15]) / 4;
+        
+        let phoneme = 'silence';
+
+        if (average < 25) {
+            phoneme = 'silence';
+        } else {
+            if (highFreq > 50 && midFreq > 50) {
+                phoneme = 'ch';
+            } else if (midLowFreq > 45 && midFreq > 40) {
+                phoneme = 'r';
+            } else if (midFreq > 35 && average > 35) {
+                phoneme = 't';
+            } else if (lowFreq > midFreq && lowFreq > 40) {
+                phoneme = 'm';
+            } else {
+                if (lowFreq > 50 && midLowFreq > 40) {
+                    phoneme = Math.random() > 0.6 ? 'a' : 'o';
+                } else if (highFreq > 35 && midFreq > 30) {
+                    phoneme = Math.random() > 0.5 ? 'e' : 'i';
+                } else if (lowFreq > 35 && highFreq < 25) {
+                    phoneme = 'u';
+                } else {
+                    const vowels = ['a', 'e', 'i', 'o', 'u'];
+                    phoneme = vowels[Math.floor(Math.random() * vowels.length)];
+                }
+            }
+        }
+        
+        this.drawCharacterOnCanvas(phoneme);
+        this.elements.progressBar.style.width = `${((this.audioContext.currentTime - this.startTime) / this.duration) * 100}%`;
+        this.animationFrameId = requestAnimationFrame(() => this.animate());
+    }
+
+    animateForVideo() {
+        if (!this.isRecordingVideo) {
+            cancelAnimationFrame(this.animationFrameId);
+            return;
+        }
+        
+        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(dataArray);
+
+        let average = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            average += dataArray[i];
+        }
+        average = average / dataArray.length;
+        
+        const lowFreq = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / 4;
+        const midLowFreq = (dataArray[4] + dataArray[5] + dataArray[6] + dataArray[7]) / 4;
+        const midFreq = (dataArray[8] + dataArray[9] + dataArray[10] + dataArray[11]) / 4;
+        const highFreq = (dataArray[12] + dataArray[13] + dataArray[14] + dataArray[15]) / 4;
+
+        let phoneme = 'silence';
+
+        if (average < 25) {
+            phoneme = 'silence';
+        } else {
+            if (highFreq > 50 && midFreq > 50) {
+                phoneme = 'ch';
+            } else if (midLowFreq > 45 && midFreq > 40) {
+                phoneme = 'r';
+            } else if (midFreq > 35 && average > 35) {
+                phoneme = 't';
+            } else if (lowFreq > midFreq && lowFreq > 40) {
+                phoneme = 'm';
+            } else {
+                if (lowFreq > 50 && midLowFreq > 40) {
+                    phoneme = Math.random() > 0.6 ? 'a' : 'o';
+                } else if (highFreq > 35 && midFreq > 30) {
+                    phoneme = Math.random() > 0.5 ? 'e' : 'i';
+                } else if (lowFreq > 35 && highFreq < 25) {
+                    phoneme = 'u';
+                } else {
+                    const vowels = ['a', 'e', 'i', 'o', 'u'];
+                    phoneme = vowels[Math.floor(Math.random() * vowels.length)];
+                }
+            }
+        }
+
+        this.drawCharacterOnCanvas(phoneme);
+        
+        if (this.mediaRecorderVideo) {
+            this.animationFrameId = requestAnimationFrame(() => this.animateForVideo());
+        }
+    }
+
+    drawCharacterOnCanvas(mouthShape) {
+        const canvas = this.elements.previewCanvas;
+        const ctx = this.ctx;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // Limpar o canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Definir cor de fundo (verde ou transparente)
+        if (this.backgroundType === 'green') {
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Desenhar a cabeça
+        ctx.fillStyle = '#fce5c8';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY - 20, 60, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#c8a687';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Desenhar os olhos
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+
+        // Olho esquerdo
+        ctx.beginPath();
+        ctx.arc(centerX - 30, centerY - 35, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Olho direito
+        ctx.beginPath();
+        ctx.arc(centerX + 30, centerY - 35, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Pupila esquerda
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.arc(centerX - 30, centerY - 35, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupila direita
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.arc(centerX + 30, centerY - 35, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Desenhar nariz
+        ctx.fillStyle = '#d4ac78';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY - 10, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Desenhar boca
+        ctx.fillStyle = '#2c1810';
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 2;
+        
+        const mouthX = centerX;
+        const mouthY = centerY + 20;
+
+        switch(mouthShape) {
+            case 'a':
+                ctx.beginPath();
+                ctx.ellipse(mouthX, mouthY, 12, 17, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+            case 'e':
+                ctx.beginPath();
+                ctx.ellipse(mouthX, mouthY, 17, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+            case 'i':
+                ctx.beginPath();
+                ctx.ellipse(mouthX, mouthY, 10, 20, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+            case 'o':
+                ctx.beginPath();
+                ctx.arc(mouthX, mouthY, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+            case 'u':
+                ctx.beginPath();
+                ctx.ellipse(mouthX, mouthY, 15, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                break;
+            case 'm':
+            case 'p':
+            case 'b':
+                ctx.beginPath();
+                ctx.ellipse(mouthX, mouthY + 5, 20, 10, 0, 0, Math.PI, true);
+                ctx.lineTo(mouthX - 20, mouthY + 5);
+                ctx.closePath();
+                ctx.stroke();
+                break;
+            case 'ch':
+            case 'sh':
+            case 'j':
+                ctx.beginPath();
+                ctx.rect(mouthX - 15, mouthY - 5, 30, 15);
+                ctx.fill();
+                ctx.stroke();
+                break;
+            case 'r':
+            case 'l':
+                ctx.beginPath();
+                ctx.moveTo(mouthX - 25, mouthY);
+                ctx.quadraticCurveTo(mouthX, mouthY + 25, mouthX + 25, mouthY);
+                ctx.fill();
+                ctx.stroke();
+                break;
+            case 't':
+            case 'd':
+                ctx.beginPath();
+                ctx.moveTo(mouthX - 15, mouthY);
+                ctx.lineTo(mouthX + 15, mouthY);
+                ctx.stroke();
+                break;
+            case 'silence':
+            default:
+                ctx.beginPath();
+                ctx.arc(mouthX, mouthY, 15, 0, Math.PI, false);
+                ctx.stroke();
+                break;
+        }
+    }
+
+    handleBackgroundChange(event) {
+        this.elements.backgroundOptions.forEach(option => option.classList.remove('active'));
+        const selectedOption = event.currentTarget;
+        selectedOption.classList.add('active');
+        this.backgroundType = selectedOption.dataset.bg;
+    }
+
+    async generateVideo() {
+        this.updateStatus('Gerando vídeo...', 'info');
+        this.updateButtonStates({ play: false, pause: false, record: false, stop: false, generate: false, download: false });
+        this.isRecordingVideo = true;
+        this.pauseTime = 0;
+        
+        const stream = this.elements.previewCanvas.captureStream(30);
+        this.mediaRecorderVideo = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        this.videoFrames = [];
+
+        this.mediaRecorderVideo.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                this.videoFrames.push(event.data);
+            }
+        };
+
+        this.mediaRecorderVideo.onstop = () => {
+            this.isRecordingVideo = false;
+            this.elements.downloadBtn.style.display = 'inline-flex';
+            this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: true });
+            this.updateStatus('Vídeo gerado com sucesso!', 'success');
+        };
+
+        this.mediaRecorderVideo.start();
+        
+        // Inicia a animação para o vídeo
+        this.playAudio();
+    }
+
+    downloadVideo() {
+        const videoBlob = new Blob(this.videoFrames, { type: 'video/webm' });
+        const videoUrl = URL.createObjectURL(videoBlob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = videoUrl;
+        a.download = 'lipsync_meme.webm';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(videoUrl);
+        document.body.removeChild(a);
     }
 }
 
-.panel {
-    background: white;
-    border-radius: 15px;
-    padding: 25px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.panel-title {
-    font-size: 1.5rem;
-    margin-bottom: 20px;
-    color: #444;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.panel-title svg {
-    width: 24px;
-    height: 24px;
-}
-
-.control-group {
-    margin-bottom: 25px;
-}
-
-.file-upload {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.file-input {
-    position: relative;
-    overflow: hidden;
-    display: inline-block;
-    width: 100%;
-}
-
-.file-input input[type="file"] {
-    position: absolute;
-    left: -9999px;
-}
-
-.file-input-label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 15px 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 600;
-}
-
-.file-input-label:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-
-.button-group {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-}
-
-.btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 1rem;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-success {
-    background: #28a745;
-    color: white;
-}
-
-.btn-danger {
-    background: #dc3545;
-    color: white;
-}
-
-.btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none !important;
-    box-shadow: none !important;
-}
-
-.btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.audio-info {
-    margin-top: 15px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    font-size: 0.9rem;
-}
-
-.progress-container {
-    margin: 20px 0;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 20px;
-    background: #e9ecef;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    width: 0%;
-    transition: width 0.3s ease;
-}
-
-.status {
-    text-align: center;
-    margin-top: 15px;
-    font-weight: 600;
-    color: #667eea;
-    padding: 10px;
-    border-radius: 8px;
-    background: #f0f4ff;
-}
-
-.preview-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-}
-
-.character-wrapper {
-    width: 100%;
-    height: 300px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc),
-                linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
-    background-size: 20px 20px;
-    background-position: 0 0, 10px 10px;
-    border-radius: 15px;
-    overflow: hidden;
-}
-
-#previewCanvas {
-    max-width: 100%;
-    max-height: 100%;
-    background: #00ff00;
-}
-
-.background-selector {
-    display: flex;
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.bg-option {
-    padding: 10px 15px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-}
-
-.bg-option.active {
-    border-color: #667eea;
-    background: #f0f4ff;
-}
-
-.instructions {
-    margin-top: 30px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 15px;
-}
-
-.instructions h3 {
-    margin-bottom: 15px;
-    color: #444;
-}
-
-.instructions ol {
-    margin-left: 20px;
-    line-height: 1.6;
-}
-
-.instructions li {
-    margin-bottom: 10px;
-}
-
-.footer {
-    text-align: center;
-    padding: 20px;
-    color: #6c757d;
-    font-size: 0.9rem;
-    border-top: 1px solid #eee;
-}
-
-.github-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: #6c757d;
-    text-decoration: none;
-    margin-top: 10px;
-}
-
-.github-link:hover {
-    color: #667eea;
-}
+document.addEventListener('DOMContentLoaded', () => {
+    new LipSyncApp();
+});
