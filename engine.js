@@ -22,11 +22,21 @@ class LipSyncApp {
         this.mouthImages = {};
         this.svgsLoaded = false;
         
+        // Sistema de controle de fonemas melhorado
+        this.phonemeHistory = [];
+        this.lastPhoneme = 'silence';
+        this.phonemeDuration = 0;
+        this.minPhonemeDuration = 0.08; // Mínimo 80ms por fonema
+        this.lastTransitionTime = 0;
+        this.transitionCooldown = 0.05; // 50ms entre mudanças
+        this.silenceThreshold = 15;
+        this.voiceThreshold = 25;
+        
         this.initializeElements();
         this.setupEventListeners();
         this.setupAudioContext();
         this.setupCanvas();
-        this.loadMouthSVGs(); // Carregar SVGs na inicialização
+        this.loadMouthSVGs();
     }
 
     initializeElements() {
@@ -70,11 +80,9 @@ class LipSyncApp {
         this.ctx = this.elements.previewCanvas.getContext('2d');
     }
 
-    // Novo método: Carregar os SVGs das bocas
     async loadMouthSVGs() {
         this.updateStatus('Carregando recursos...', 'info');
         
-        // Mapeamento baseado na sua tabela
         const svgMapping = {
             'silence': 'BMP.svg',
             'a': 'A.svg',
@@ -105,7 +113,6 @@ class LipSyncApp {
             'q': 'Q.svg'
         };
 
-        // Carregar apenas os arquivos únicos
         const uniqueFiles = [...new Set(Object.values(svgMapping))];
         const fileToImageMap = {};
 
@@ -131,14 +138,13 @@ class LipSyncApp {
                 URL.revokeObjectURL(url);
             }
 
-            // Mapear fonemas para imagens carregadas
             for (const [phoneme, filename] of Object.entries(svgMapping)) {
                 this.mouthImages[phoneme] = fileToImageMap[filename];
             }
 
             this.svgsLoaded = true;
             this.updateStatus('Pronto para começar');
-            this.drawCharacterOnCanvas('silence'); // Desenhar estado inicial
+            this.drawCharacterOnCanvas('silence');
             
         } catch (error) {
             console.error('Erro ao carregar SVGs:', error);
@@ -182,12 +188,43 @@ class LipSyncApp {
                         generate: this.svgsLoaded, 
                         download: false 
                     });
+                    // Calibração automática baseada no áudio carregado
+                    this.calibrateAudioThresholds();
                 }, error => {
                     this.updateStatus('Erro ao decodificar áudio.', 'error');
                     console.error('Error decoding audio:', error);
                 });
             };
             reader.readAsArrayBuffer(file);
+        }
+    }
+
+    // Calibração automática dos thresholds
+    calibrateAudioThresholds() {
+        if (!this.audioBuffer) return;
+        
+        const samples = this.audioBuffer.getChannelData(0);
+        const windowSize = 1024;
+        const energyLevels = [];
+        
+        // Amostragem para análise rápida
+        const step = Math.max(1, Math.floor(samples.length / (windowSize * 100)));
+        
+        for (let i = 0; i < samples.length - windowSize; i += windowSize * step) {
+            const window = samples.slice(i, i + windowSize);
+            const energy = window.reduce((sum, sample) => sum + Math.abs(sample) * 255, 0) / windowSize;
+            energyLevels.push(energy);
+        }
+        
+        if (energyLevels.length > 0) {
+            energyLevels.sort((a, b) => a - b);
+            const percentile20 = energyLevels[Math.floor(energyLevels.length * 0.2)] || 10;
+            const percentile60 = energyLevels[Math.floor(energyLevels.length * 0.6)] || 25;
+            
+            this.silenceThreshold = Math.max(8, percentile20 * 0.8);
+            this.voiceThreshold = Math.max(15, percentile60 * 0.9);
+            
+            console.log(`Thresholds calibrados - Silêncio: ${this.silenceThreshold.toFixed(1)}, Voz: ${this.voiceThreshold.toFixed(1)}`);
         }
     }
 
@@ -227,6 +264,7 @@ class LipSyncApp {
                             generate: this.svgsLoaded, 
                             download: false 
                         });
+                        this.calibrateAudioThresholds();
                     } catch (err) {
                         this.updateStatus('Erro ao decodificar a gravação.', 'error');
                         console.error('Error decoding recorded audio:', err);
@@ -257,10 +295,17 @@ class LipSyncApp {
             this.source.stop();
         }
 
+        // Reset do sistema de fonemas
+        this.phonemeHistory = [];
+        this.lastPhoneme = 'silence';
+        this.phonemeDuration = 0;
+        this.lastTransitionTime = 0;
+
         this.source = this.audioContext.createBufferSource();
         this.source.buffer = this.audioBuffer;
         this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 256;
+        this.analyser.fftSize = 512; // Aumentado para melhor resolução
+        this.analyser.smoothingTimeConstant = 0.3; // Menos suavização para mais responsividade
         this.source.connect(this.analyser);
         this.analyser.connect(this.audioContext.destination);
 
@@ -268,7 +313,7 @@ class LipSyncApp {
             if (!this.isRecordingVideo) {
                 this.updateStatus('Pronto para começar');
                 this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: true });
-                this.drawCharacterOnCanvas('silence'); // Voltar ao estado de silêncio
+                this.drawCharacterOnCanvas('silence');
             }
         };
 
@@ -286,129 +331,50 @@ class LipSyncApp {
         cancelAnimationFrame(this.animationFrameId);
         this.updateStatus('Pausado');
         this.updateButtonStates({ play: true, pause: false, record: false, stop: false, generate: true, download: false });
-        this.drawCharacterOnCanvas('silence'); // Mostrar silêncio quando pausado
+        this.drawCharacterOnCanvas('silence');
     }
 
-    /** --- Análise aprimorada de fonemas --- **/
+    // Análise melhorada de fonemas
     getPhonemeFromData(dataArray) {
-        // Calcular médias de diferentes faixas de frequência
+        const currentTime = this.audioContext.currentTime - this.startTime;
+        
+        // Calcular energia total
         const totalEnergy = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
         
-        // Dividir o espectro em mais faixas para melhor análise
-        const veryLowFreq = this.getFreqAverage(dataArray, 0, 3);      // 0-3: Sons graves profundos
-        const lowFreq = this.getFreqAverage(dataArray, 4, 8);          // 4-8: Sons graves
-        const lowMidFreq = this.getFreqAverage(dataArray, 9, 16);      // 9-16: Frequências médias-baixas
-        const midFreq = this.getFreqAverage(dataArray, 17, 32);        // 17-32: Frequências médias
-        const midHighFreq = this.getFreqAverage(dataArray, 33, 64);    // 33-64: Frequências médias-altas
-        const highFreq = this.getFreqAverage(dataArray, 65, 100);      // 65-100: Frequências altas
-        const veryHighFreq = this.getFreqAverage(dataArray, 101, 127); // 101-127: Frequências muito altas
-
         // Detectar silêncio
-        if (totalEnergy < 20) return 'silence';
+        if (totalEnergy < this.silenceThreshold) {
+            return this.updatePhonemeWithTiming('silence', currentTime);
+        }
 
-        // Calcular ratios para identificar padrões específicos
-        const lowToMidRatio = lowFreq / (midFreq + 1);
-        const highToMidRatio = highFreq / (midFreq + 1);
-        const energySpread = this.calculateSpread(dataArray);
+        // Dividir espectro em bandas mais específicas
+        const veryLowFreq = this.getFreqAverage(dataArray, 0, 4);      
+        const lowFreq = this.getFreqAverage(dataArray, 5, 12);         
+        const lowMidFreq = this.getFreqAverage(dataArray, 13, 25);     
+        const midFreq = this.getFreqAverage(dataArray, 26, 50);        
+        const midHighFreq = this.getFreqAverage(dataArray, 51, 80);    
+        const highFreq = this.getFreqAverage(dataArray, 81, 110);      
+        const veryHighFreq = this.getFreqAverage(dataArray, 111, 127); 
+
+        // Calcular características espectrais
+        const spectralCentroid = this.calculateSpectralCentroid(dataArray);
+        const spectralRolloff = this.calculateSpectralRolloff(dataArray, 0.85);
+        const zeroCrossingRate = this.calculateZeroCrossingRate(dataArray);
         
-        // Sistema de pontuação para cada fonema
+        // Sistema de pontuação
         const scores = {
-            'a': 0,    // A.svg
-            'e': 0,    // E.svg  
-            'i': 0,    // FVI.svg
-            'o': 0,    // O.svg
-            'u': 0,    // U.svg
-            'm': 0,    // BMP.svg
-            'r': 0,    // R.svg
-            'l': 0,    // L.svg
-            'ch': 0,   // CDGKNSTXYZ.svg
-            'q': 0     // Q.svg
+            'a': this.scorePhoneme_A(veryLowFreq, lowFreq, lowMidFreq, midFreq, totalEnergy, spectralCentroid),
+            'e': this.scorePhoneme_E(lowMidFreq, midFreq, midHighFreq, spectralCentroid),
+            'i': this.scorePhoneme_I(midHighFreq, highFreq, veryHighFreq, spectralCentroid),
+            'o': this.scorePhoneme_O(veryLowFreq, lowFreq, midFreq, spectralRolloff),
+            'u': this.scorePhoneme_U(veryLowFreq, lowFreq, spectralRolloff),
+            'm': this.scorePhoneme_M(veryLowFreq, lowFreq, zeroCrossingRate),
+            'r': this.scorePhoneme_R(lowMidFreq, midFreq, zeroCrossingRate),
+            'l': this.scorePhoneme_L(midFreq, midHighFreq, spectralCentroid),
+            'ch': this.scorePhoneme_CH(highFreq, veryHighFreq, zeroCrossingRate),
+            'q': this.scorePhoneme_Q(lowMidFreq, midFreq, highFreq)
         };
 
-        // VOGAL A - Frequências baixas-médias dominantes, abertura ampla
-        if (lowFreq > 40 && midFreq > 35 && lowToMidRatio > 0.8) {
-            scores['a'] += 3;
-        }
-        if (lowFreq > midHighFreq && totalEnergy > 35) {
-            scores['a'] += 2;
-        }
-
-        // VOGAL E - Frequências médias-altas, mais fechada que A
-        if (midFreq > 40 && midHighFreq > 30 && highToMidRatio < 1.2) {
-            scores['e'] += 3;
-        }
-        if (midFreq > lowFreq && midHighFreq > lowFreq) {
-            scores['e'] += 2;
-        }
-
-        // VOGAL I - Frequências altas, boca mais fechada
-        if (highFreq > 45 && midHighFreq > 40) {
-            scores['i'] += 3;
-        }
-        if (highFreq > lowFreq * 1.5 && veryHighFreq > 25) {
-            scores['i'] += 2;
-        }
-
-        // VOGAL O - Frequências baixas dominantes, som arredondado
-        if (lowFreq > 50 && veryLowFreq > 30 && highFreq < 35) {
-            scores['o'] += 3;
-        }
-        if (lowToMidRatio > 1.3 && totalEnergy > 30) {
-            scores['o'] += 2;
-        }
-
-        // VOGAL U - Muito grave, boca bem fechada
-        if (veryLowFreq > 45 && lowFreq > 40 && highFreq < 25) {
-            scores['u'] += 3;
-        }
-        if (lowFreq > midFreq * 1.5 && highToMidRatio < 0.7) {
-            scores['u'] += 2;
-        }
-
-        // SOM M/B/P - Sons labiais, frequências baixas concentradas
-        if (lowFreq > 35 && midFreq < 30 && energySpread < 0.6) {
-            scores['m'] += 3;
-        }
-        if (veryLowFreq > lowFreq * 0.8 && highFreq < 30) {
-            scores['m'] += 2;
-        }
-
-        // SOM R - Vibração, frequências médias-baixas com modulação
-        if (lowMidFreq > 40 && midFreq > 35 && energySpread > 0.7) {
-            scores['r'] += 3;
-        }
-        if (lowMidFreq > highFreq && totalEnergy > 40) {
-            scores['r'] += 2;
-        }
-
-        // SOM L - Lateral, frequências médias distribuídas
-        if (midFreq > 35 && lowMidFreq > 30 && energySpread > 0.5 && energySpread < 0.9) {
-            scores['l'] += 3;
-        }
-        if (midFreq > lowFreq && midFreq > highFreq) {
-            scores['l'] += 1;
-        }
-
-        // SONS CH/SH/Consoantes - Frequências altas, ruído
-        if (highFreq > 50 && veryHighFreq > 35) {
-            scores['ch'] += 3;
-        }
-        if (midHighFreq > 45 && energySpread > 0.8) {
-            scores['ch'] += 2;
-        }
-        if (highToMidRatio > 1.5) {
-            scores['ch'] += 1;
-        }
-
-        // SOM Q - Frequências médias com pico específico
-        if (midFreq > 45 && lowMidFreq > 35 && highFreq > 30 && highFreq < 50) {
-            scores['q'] += 3;
-        }
-        if (midFreq > lowFreq && midFreq > highFreq && totalEnergy > 35) {
-            scores['q'] += 1;
-        }
-
-        // Encontrar o fonema com maior pontuação
+        // Encontrar fonema com maior pontuação
         let maxScore = 0;
         let detectedPhoneme = 'silence';
         
@@ -419,19 +385,247 @@ class LipSyncApp {
             }
         }
 
-        // Se nenhum fonema teve pontuação suficiente, usar lógica de fallback
+        // Aplicar limiar mínimo e lógica de fallback
         if (maxScore < 2) {
-            if (totalEnergy < 25) return 'silence';
-            if (lowFreq > midFreq && lowFreq > highFreq) return Math.random() > 0.5 ? 'o' : 'u';
-            if (highFreq > midFreq && highFreq > lowFreq) return Math.random() > 0.5 ? 'i' : 'ch';
-            if (midFreq > lowFreq && midFreq > highFreq) return Math.random() > 0.5 ? 'e' : 'l';
-            return ['a', 'e', 'i', 'o', 'u'][Math.floor(Math.random() * 5)];
+            detectedPhoneme = this.fallbackPhonemeDetection(
+                veryLowFreq, lowFreq, midFreq, highFreq, totalEnergy
+            );
         }
 
-        return detectedPhoneme;
+        return this.updatePhonemeWithTiming(detectedPhoneme, currentTime);
     }
 
-    // Método auxiliar para calcular média de frequência em uma faixa
+    // Controle de duração e transições
+    updatePhonemeWithTiming(newPhoneme, currentTime) {
+        // Se é o mesmo fonema, incrementar duração
+        if (newPhoneme === this.lastPhoneme) {
+            this.phonemeDuration += 0.016; // Aproximadamente 60fps
+            return this.lastPhoneme;
+        }
+        
+        // Verificar cooldown de transição
+        if (currentTime - this.lastTransitionTime < this.transitionCooldown) {
+            this.phonemeDuration += 0.016;
+            return this.lastPhoneme;
+        }
+        
+        // Verificar duração mínima (exceto para silêncio entrando ou saindo)
+        const isTransitionToSilence = newPhoneme === 'silence';
+        const isTransitionFromSilence = this.lastPhoneme === 'silence';
+        
+        if (!isTransitionToSilence && !isTransitionFromSilence && 
+            this.phonemeDuration < this.minPhonemeDuration) {
+            this.phonemeDuration += 0.016;
+            return this.lastPhoneme;
+        }
+        
+        // Aplicar transição suave para alguns casos
+        const smoothedPhoneme = this.applySmoothTransition(this.lastPhoneme, newPhoneme, this.phonemeDuration);
+        
+        // Registrar no histórico
+        this.phonemeHistory.push({
+            phoneme: this.lastPhoneme,
+            duration: this.phonemeDuration,
+            timestamp: currentTime - this.phonemeDuration
+        });
+        
+        // Limitar histórico
+        if (this.phonemeHistory.length > 30) {
+            this.phonemeHistory.shift();
+        }
+        
+        // Atualizar estado
+        this.lastPhoneme = smoothedPhoneme;
+        this.phonemeDuration = 0;
+        this.lastTransitionTime = currentTime;
+        
+        return smoothedPhoneme;
+    }
+
+    // Aplicar transições suaves entre fonemas
+    applySmoothTransition(fromPhoneme, toPhoneme, duration) {
+        // Para durações muito curtas, aplicar transições intermediárias
+        if (duration < 0.06) {
+            const transitionMap = {
+                'silence_a': 'm',
+                'silence_e': 'ch', 
+                'silence_i': 'i',
+                'silence_o': 'm',
+                'silence_u': 'm',
+                'a_i': 'e',
+                'i_a': 'e',
+                'o_u': 'o',
+                'u_o': 'u',
+                'a_e': duration < 0.03 ? 'a' : 'e',
+                'e_a': duration < 0.03 ? 'e' : 'a'
+            };
+            
+            const key = `${fromPhoneme}_${toPhoneme}`;
+            return transitionMap[key] || toPhoneme;
+        }
+        
+        return toPhoneme;
+    }
+
+    // Funções de pontuação para cada fonema
+    scorePhoneme_A(veryLowFreq, lowFreq, lowMidFreq, midFreq, totalEnergy, spectralCentroid) {
+        let score = 0;
+        if (lowFreq > 35 && midFreq > 30) score += 3;
+        if (spectralCentroid > 0.3 && spectralCentroid < 0.6) score += 2;
+        if (totalEnergy > this.voiceThreshold) score += 1;
+        if (lowFreq / (midFreq + 1) > 0.8) score += 1;
+        return score;
+    }
+
+    scorePhoneme_E(lowMidFreq, midFreq, midHighFreq, spectralCentroid) {
+        let score = 0;
+        if (midFreq > 35 && midHighFreq > 25) score += 3;
+        if (spectralCentroid > 0.4 && spectralCentroid < 0.7) score += 2;
+        if (midFreq > lowMidFreq * 1.2) score += 1;
+        return score;
+    }
+
+    scorePhoneme_I(midHighFreq, highFreq, veryHighFreq, spectralCentroid) {
+        let score = 0;
+        if (highFreq > 40) score += 3;
+        if (veryHighFreq > 30) score += 2;
+        if (spectralCentroid > 0.6) score += 2;
+        if (highFreq > midHighFreq * 1.3) score += 1;
+        return score;
+    }
+
+    scorePhoneme_O(veryLowFreq, lowFreq, midFreq, spectralRolloff) {
+        let score = 0;
+        if (lowFreq > 45 && veryLowFreq > 25) score += 3;
+        if (spectralRolloff < 0.4) score += 2;
+        if (lowFreq > midFreq * 1.5) score += 2;
+        return score;
+    }
+
+    scorePhoneme_U(veryLowFreq, lowFreq, spectralRolloff) {
+        let score = 0;
+        if (veryLowFreq > 40 && lowFreq > 35) score += 3;
+        if (spectralRolloff < 0.3) score += 3;
+        if (veryLowFreq > lowFreq * 0.9) score += 1;
+        return score;
+    }
+
+    scorePhoneme_M(veryLowFreq, lowFreq, zeroCrossingRate) {
+        let score = 0;
+        if (veryLowFreq > 30 && lowFreq > 25) score += 2;
+        if (zeroCrossingRate < 0.3) score += 2;
+        return score;
+    }
+
+    scorePhoneme_R(lowMidFreq, midFreq, zeroCrossingRate) {
+        let score = 0;
+        if (lowMidFreq > 30 && midFreq > 25) score += 2;
+        if (zeroCrossingRate > 0.4) score += 3;
+        return score;
+    }
+
+    scorePhoneme_L(midFreq, midHighFreq, spectralCentroid) {
+        let score = 0;
+        if (midFreq > 30 && midHighFreq > 20) score += 2;
+        if (spectralCentroid > 0.35 && spectralCentroid < 0.65) score += 2;
+        return score;
+    }
+
+    scorePhoneme_CH(highFreq, veryHighFreq, zeroCrossingRate) {
+        let score = 0;
+        if (highFreq > 45 && veryHighFreq > 30) score += 3;
+        if (zeroCrossingRate > 0.6) score += 2;
+        return score;
+    }
+
+    scorePhoneme_Q(lowMidFreq, midFreq, highFreq) {
+        let score = 0;
+        if (midFreq > 35 && lowMidFreq > 25 && highFreq < 35) score += 2;
+        return score;
+    }
+
+    // Métodos auxiliares para análise espectral
+    calculateSpectralCentroid(dataArray) {
+        let numerator = 0;
+        let denominator = 0;
+        
+        for (let i = 0; i < dataArray.length; i++) {
+            numerator += i * dataArray[i];
+            denominator += dataArray[i];
+        }
+        
+        return denominator > 0 ? numerator / (denominator * dataArray.length) : 0;
+    }
+
+    calculateSpectralRolloff(dataArray, threshold = 0.85) {
+        const totalEnergy = dataArray.reduce((a, b) => a + b, 0);
+        const targetEnergy = totalEnergy * threshold;
+        
+        let cumulativeEnergy = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            cumulativeEnergy += dataArray[i];
+            if (cumulativeEnergy >= targetEnergy) {
+                return i / dataArray.length;
+            }
+        }
+        
+        return 1.0;
+    }
+
+    calculateZeroCrossingRate(dataArray) {
+        let crossings = 0;
+        const mean = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        
+        for (let i = 1; i < dataArray.length; i++) {
+            if ((dataArray[i] - mean) * (dataArray[i-1] - mean) < 0) {
+                crossings++;
+            }
+        }
+        
+        return crossings / dataArray.length;
+    }
+
+    fallbackPhonemeDetection(veryLowFreq, lowFreq, midFreq, highFreq, totalEnergy) {
+        const total = veryLowFreq + lowFreq + midFreq + highFreq;
+        if (total === 0) return 'silence';
+        
+        const ratios = {
+            veryLow: veryLowFreq / total,
+            low: lowFreq / total,
+            mid: midFreq / total,
+            high: highFreq / total
+        };
+        
+        if (ratios.veryLow > 0.4) return Math.random() > 0.5 ? 'u' : 'o';
+        if (ratios.high > 0.4) return Math.random() > 0.5 ? 'i' : 'ch';
+        if (ratios.mid > 0.4) return Math.random() > 0.5 ? 'e' : 'a';
+        if (ratios.low > 0.4) return Math.random() > 0.5 ? 'a' : 'm';
+        
+        // Variação mais inteligente baseada no histórico
+        return this.getVariedPhoneme();
+    }
+
+    getVariedPhoneme() {
+        const recentPhonemes = this.phonemeHistory.slice(-5).map(h => h.phoneme);
+        const vowels = ['a', 'e', 'i', 'o', 'u'];
+        const consonants = ['m', 'l', 'r', 'ch'];
+        
+        // Evitar repetição excessiva
+        const lastPhoneme = recentPhonemes[recentPhonemes.length - 1] || 'silence';
+        
+        if (vowels.includes(lastPhoneme)) {
+            // Se a última foi vogal, alternar para consoante às vezes
+            return Math.random() > 0.7 ? 
+                   consonants[Math.floor(Math.random() * consonants.length)] :
+                   vowels[Math.floor(Math.random() * vowels.length)];
+        } else {
+            // Se a última foi consoante, preferir vogal
+            return Math.random() > 0.3 ?
+                   vowels[Math.floor(Math.random() * vowels.length)] :
+                   consonants[Math.floor(Math.random() * consonants.length)];
+        }
+    }
+
     getFreqAverage(dataArray, start, end) {
         const validEnd = Math.min(end, dataArray.length - 1);
         const validStart = Math.max(0, start);
@@ -444,19 +638,6 @@ class LipSyncApp {
         }
         
         return count > 0 ? sum / count : 0;
-    }
-
-    // Método auxiliar para calcular dispersão da energia
-    calculateSpread(dataArray) {
-        const mean = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        let variance = 0;
-        
-        for (let i = 0; i < dataArray.length; i++) {
-            variance += Math.pow(dataArray[i] - mean, 2);
-        }
-        
-        const stdDev = Math.sqrt(variance / dataArray.length);
-        return stdDev / (mean + 1); // Normalizar pela média
     }
 
     animate() {
@@ -477,16 +658,12 @@ class LipSyncApp {
         this.animationFrameId = requestAnimationFrame(() => this.animate());
     }
 
-    // Método completamente reescrito - apenas desenha a boca SVG
     drawCharacterOnCanvas(mouthShape) {
-        if (!this.svgsLoaded) {
-            return; // Não desenha nada se os SVGs não estão carregados
-        }
+        if (!this.svgsLoaded) return;
 
         const canvas = this.elements.previewCanvas;
         const ctx = this.ctx;
         
-        // Limpar canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Desenhar background se necessário
@@ -498,16 +675,14 @@ class LipSyncApp {
         // Desenhar apenas a boca SVG
         const mouthImage = this.mouthImages[mouthShape] || this.mouthImages['silence'];
         if (mouthImage) {
-            // Centralizar a boca no canvas
-            const mouthWidth = 200; // Ajuste conforme necessário
-            const mouthHeight = 150; // Ajuste conforme necessário
+            const mouthWidth = 200;
+            const mouthHeight = 150;
             const x = (canvas.width - mouthWidth) / 2;
             const y = (canvas.height - mouthHeight) / 2;
             
             ctx.drawImage(mouthImage, x, y, mouthWidth, mouthHeight);
         }
 
-        // Armazenar a boca atual para referência
         this.currentMouth = mouthShape;
     }
 
@@ -517,7 +692,6 @@ class LipSyncApp {
         selectedOption.classList.add('active');
         this.backgroundType = selectedOption.dataset.bg;
         
-        // Redesenhar com o novo background
         this.drawCharacterOnCanvas(this.currentMouth);
     }
 
