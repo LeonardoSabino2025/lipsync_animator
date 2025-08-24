@@ -21,6 +21,7 @@
                     </svg>
                     Controles de Áudio
                 </h2>
+                
                 <div class="control-group">
                     <div class="file-upload">
                         <div class="file-input">
@@ -54,6 +55,24 @@
                 </div>
 
                 <div class="audio-info" id="audioInfo" style="display: none;"></div>
+
+                <div class="control-group">
+                    <h3>Expressão da Boca</h3>
+                    <div class="button-group">
+                        <button id="happyBtn" class="btn btn-primary btn-active">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                <path d="M8 6.999c1.104 0 2-.896 2-2s-.896-2-2-2-2 .896-2 2 .896 2 2 2zm0 2c-1.104 0-2 .896-2 2s.896 2 2 2 2-.896 2-2-.896-2-2-2zm6-4c1.104 0 2-.896 2-2s-.896-2-2-2-2 .896-2 2 .896 2 2 2zm0 2c-1.104 0-2 .896-2 2s.896 2 2 2 2-.896 2-2-.896-2-2-2zm4-6c1.104 0 2-.896 2-2s-.896-2-2-2-2 .896-2 2 .896 2 2 2zm0 2c-1.104 0-2 .896-2 2s.896 2 2 2 2-.896 2-2-.896-2-2-2z"/>
+                            </svg>
+                            Feliz/Normal
+                        </button>
+                        <button id="sadBtn" class="btn btn-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            Triste/Bravo
+                        </button>
+                    </div>
+                </div>
 
                 <div class="control-group">
                     <h3>Reprodução</h3>
@@ -135,6 +154,7 @@
                         <li><strong>Carregamento inicial:</strong> Aguarde o carregamento dos recursos SVG das bocas</li>
                         <li><strong>Áudio:</strong> Selecione um arquivo de áudio ou grave um áudio diretamente</li>
                         <li><strong>Visualização:</strong> Reproduza o áudio para ver a animação das bocas em tempo real</li>
+                        <li><strong>Expressão:</strong> Use os botões "Feliz/Normal" e "Triste/Bravo" para alterar a expressão da boca</li>
                         <li><strong>Background:</strong> Escolha entre fundo verde (chroma key) ou transparente</li>
                         <li><strong>Geração:</strong> Clique em "Gerar Vídeo" para processar a animação completa</li>
                         <li><strong>Download:</strong> Baixe o arquivo .webm e use em seus projetos de edição</li>

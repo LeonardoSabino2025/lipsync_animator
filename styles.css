@@ -491,6 +491,13 @@ body {
   margin: 20px auto;
 }
 
+/* Estilo para botões ativos */
+.btn-active {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--color-primary);
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }

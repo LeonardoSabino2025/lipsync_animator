@@ -17,8 +17,9 @@ class LipSyncApp {
         this.mediaRecorderVideo = null;
         this.recordingStream = null;
         this.currentMouth = 'silence';
+        this.isMouthUpsideDown = false;
         
-        // Novo: Armazenar as imagens SVG das bocas
+        // Armazenar as imagens SVG das bocas
         this.mouthImages = {};
         this.svgsLoaded = false;
         
@@ -53,7 +54,9 @@ class LipSyncApp {
             generateBtn: document.getElementById('generateBtn'),
             downloadBtn: document.getElementById('downloadBtn'),
             status: document.getElementById('status'),
-            fileInputLabel: document.querySelector('.file-input-label')
+            fileInputLabel: document.querySelector('.file-input-label'),
+            happyBtn: document.getElementById('happyBtn'),
+            sadBtn: document.getElementById('sadBtn')
         };
     }
 
@@ -65,8 +68,22 @@ class LipSyncApp {
         this.elements.pauseBtn.addEventListener('click', this.pauseAudio.bind(this));
         this.elements.generateBtn.addEventListener('click', this.generateVideo.bind(this));
         this.elements.downloadBtn.addEventListener('click', this.downloadVideo.bind(this));
+        
         this.elements.backgroundOptions.forEach(option => {
             option.addEventListener('click', this.handleBackgroundChange.bind(this));
+        });
+        
+        // Event listeners para os botões de expressão
+        this.elements.happyBtn.addEventListener('click', () => {
+            this.toggleMouthOrientation(false);
+            this.elements.happyBtn.classList.add('btn-active');
+            this.elements.sadBtn.classList.remove('btn-active');
+        });
+        
+        this.elements.sadBtn.addEventListener('click', () => {
+            this.toggleMouthOrientation(true);
+            this.elements.sadBtn.classList.add('btn-active');
+            this.elements.happyBtn.classList.remove('btn-active');
         });
     }
 
@@ -395,7 +412,7 @@ class LipSyncApp {
         return this.updatePhonemeWithTiming(detectedPhoneme, currentTime);
     }
 
-    // Controle de duração e transições
+    // Controle de duração and transições
     updatePhonemeWithTiming(newPhoneme, currentTime) {
         // Se é o mesmo fonema, incrementar duração
         if (newPhoneme === this.lastPhoneme) {
@@ -680,10 +697,28 @@ class LipSyncApp {
             const x = (canvas.width - mouthWidth) / 2;
             const y = (canvas.height - mouthHeight) / 2;
             
+            // Salvar o estado atual do contexto
+            ctx.save();
+            
+            if (this.isMouthUpsideDown) {
+                // Aplicar transformação para inverter verticalmente
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.scale(1, -1); // Inverter verticalmente
+                ctx.translate(-canvas.width / 2, -canvas.height / 2);
+            }
+            
             ctx.drawImage(mouthImage, x, y, mouthWidth, mouthHeight);
+            
+            // Restaurar o estado do contexto
+            ctx.restore();
         }
 
         this.currentMouth = mouthShape;
+    }
+
+    toggleMouthOrientation(isUpsideDown) {
+        this.isMouthUpsideDown = isUpsideDown;
+        this.drawCharacterOnCanvas(this.currentMouth);
     }
 
     handleBackgroundChange(event) {
