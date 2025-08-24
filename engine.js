@@ -18,6 +18,7 @@ class LipSyncApp {
         this.recordingStream = null;
         this.currentMouth = 'silence';
         this.isMouthUpsideDown = false;
+<<<<<<< HEAD
 
         // --- Atributos para os olhos ---
         this.eyeExpressions = {}; // Para armazenar as imagens SVG dos olhos
@@ -32,6 +33,13 @@ class LipSyncApp {
         // Armazenar as imagens SVG das bocas
         this.mouthImages = {};
         this.svgsLoaded = false;
+=======
+        
+        // Armazenar as imagens SVG das bocas
+        this.mouthImages = {};
+        this.svgsLoaded = false;
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Sistema de controle de fonemas melhorado
         this.phonemeHistory = [];
         this.lastPhoneme = 'silence';
@@ -41,11 +49,19 @@ class LipSyncApp {
         this.transitionCooldown = 0.05; // 50ms entre mudanças
         this.silenceThreshold = 15;
         this.voiceThreshold = 25;
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.initializeElements();
         this.setupEventListeners();
         this.setupAudioContext();
         this.setupCanvas();
+<<<<<<< HEAD
         this.loadSVGs(); // Carrega bocas E olhos
+=======
+        this.loadMouthSVGs();
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
     }
 
     initializeElements() {
@@ -64,6 +80,7 @@ class LipSyncApp {
             status: document.getElementById('status'),
             fileInputLabel: document.querySelector('.file-input-label'),
             happyBtn: document.getElementById('happyBtn'),
+<<<<<<< HEAD
             sadBtn: document.getElementById('sadBtn'),
             // --- Novos elementos para os olhos ---
             positionLeftBtn: document.getElementById('positionLeftBtn'),
@@ -74,6 +91,9 @@ class LipSyncApp {
             // --- Novo: Botões de Gênero ---
             genderMaleBtn: document.getElementById('genderMaleBtn'),
             genderFemaleBtn: document.getElementById('genderFemaleBtn')
+=======
+            sadBtn: document.getElementById('sadBtn')
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         };
     }
 
@@ -85,20 +105,33 @@ class LipSyncApp {
         this.elements.pauseBtn.addEventListener('click', this.pauseAudio.bind(this));
         this.elements.generateBtn.addEventListener('click', this.generateVideo.bind(this));
         this.elements.downloadBtn.addEventListener('click', this.downloadVideo.bind(this));
+<<<<<<< HEAD
         this.elements.backgroundOptions.forEach(option => {
             option.addEventListener('click', this.handleBackgroundChange.bind(this));
         });
+=======
+        
+        this.elements.backgroundOptions.forEach(option => {
+            option.addEventListener('click', this.handleBackgroundChange.bind(this));
+        });
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Event listeners para os botões de expressão
         this.elements.happyBtn.addEventListener('click', () => {
             this.toggleMouthOrientation(false);
             this.elements.happyBtn.classList.add('btn-active');
             this.elements.sadBtn.classList.remove('btn-active');
         });
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.elements.sadBtn.addEventListener('click', () => {
             this.toggleMouthOrientation(true);
             this.elements.sadBtn.classList.add('btn-active');
             this.elements.happyBtn.classList.remove('btn-active');
         });
+<<<<<<< HEAD
 
         // --- Listeners para os novos controles de olhos ---
         if (this.elements.positionLeftBtn && this.elements.positionRightBtn) {
@@ -144,6 +177,8 @@ class LipSyncApp {
                 this.loadSVGs();
             });
         }
+=======
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
     }
 
     setupAudioContext() {
@@ -156,6 +191,7 @@ class LipSyncApp {
         this.ctx = this.elements.previewCanvas.getContext('2d');
     }
 
+<<<<<<< HEAD
     // --- Função modificada para carregar bocas e olhos com base no gênero ---
 // --- Nova função para carregar todos os SVGs ---
 async loadSVGs() {
@@ -249,6 +285,80 @@ async loadSVGs() {
         this.svgsLoaded = false;
     }
 }
+=======
+    async loadMouthSVGs() {
+        this.updateStatus('Carregando recursos...', 'info');
+        
+        const svgMapping = {
+            'silence': 'BMP.svg',
+            'a': 'A.svg',
+            'e': 'E.svg',
+            'i': 'FVI.svg',
+            'o': 'O.svg',
+            'u': 'U.svg',
+            'm': 'BMP.svg',
+            'p': 'BMP.svg',
+            'b': 'BMP.svg',
+            'ch': 'CDGKNSTXYZ.svg',
+            'sh': 'CDGKNSTXYZ.svg',
+            'j': 'CDGKNSTXYZ.svg',
+            'r': 'R.svg',
+            'l': 'L.svg',
+            't': 'CDGKNSTXYZ.svg',
+            'd': 'CDGKNSTXYZ.svg',
+            'c': 'CDGKNSTXYZ.svg',
+            'g': 'CDGKNSTXYZ.svg',
+            'k': 'CDGKNSTXYZ.svg',
+            'n': 'CDGKNSTXYZ.svg',
+            's': 'CDGKNSTXYZ.svg',
+            'x': 'CDGKNSTXYZ.svg',
+            'y': 'CDGKNSTXYZ.svg',
+            'z': 'CDGKNSTXYZ.svg',
+            'f': 'FVI.svg',
+            'v': 'FVI.svg',
+            'q': 'Q.svg'
+        };
+
+        const uniqueFiles = [...new Set(Object.values(svgMapping))];
+        const fileToImageMap = {};
+
+        try {
+            for (const filename of uniqueFiles) {
+                const response = await fetch(`bocas/${filename}`);
+                if (!response.ok) {
+                    throw new Error(`Falha ao carregar ${filename}`);
+                }
+                
+                const svgText = await response.text();
+                const img = new Image();
+                const blob = new Blob([svgText], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = url;
+                });
+                
+                fileToImageMap[filename] = img;
+                URL.revokeObjectURL(url);
+            }
+
+            for (const [phoneme, filename] of Object.entries(svgMapping)) {
+                this.mouthImages[phoneme] = fileToImageMap[filename];
+            }
+
+            this.svgsLoaded = true;
+            this.updateStatus('Pronto para começar');
+            this.drawCharacterOnCanvas('silence');
+            
+        } catch (error) {
+            console.error('Erro ao carregar SVGs:', error);
+            this.updateStatus('Erro ao carregar recursos das bocas', 'error');
+            this.svgsLoaded = false;
+        }
+    }
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
 
     updateStatus(message, type = 'info') {
         this.elements.status.textContent = message;
@@ -277,6 +387,7 @@ async loadSVGs() {
                     this.updateStatus('Áudio carregado com sucesso!');
                     this.elements.audioInfo.style.display = 'block';
                     this.elements.audioInfo.textContent = `Arquivo: ${file.name} | Duração: ${this.duration.toFixed(2)}s`;
+<<<<<<< HEAD
                     this.updateButtonStates({
                         play: this.svgsLoaded,
                         pause: false,
@@ -284,6 +395,15 @@ async loadSVGs() {
                         stop: false,
                         generate: this.svgsLoaded,
                         download: false
+=======
+                    this.updateButtonStates({ 
+                        play: this.svgsLoaded, 
+                        pause: false, 
+                        record: true, 
+                        stop: false, 
+                        generate: this.svgsLoaded, 
+                        download: false 
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
                     });
                     // Calibração automática baseada no áudio carregado
                     this.calibrateAudioThresholds();
@@ -299,22 +419,44 @@ async loadSVGs() {
     // Calibração automática dos thresholds
     calibrateAudioThresholds() {
         if (!this.audioBuffer) return;
+<<<<<<< HEAD
         const samples = this.audioBuffer.getChannelData(0);
         const windowSize = 1024;
         const energyLevels = [];
         // Amostragem para análise rápida
         const step = Math.max(1, Math.floor(samples.length / (windowSize * 100)));
+=======
+        
+        const samples = this.audioBuffer.getChannelData(0);
+        const windowSize = 1024;
+        const energyLevels = [];
+        
+        // Amostragem para análise rápida
+        const step = Math.max(1, Math.floor(samples.length / (windowSize * 100)));
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         for (let i = 0; i < samples.length - windowSize; i += windowSize * step) {
             const window = samples.slice(i, i + windowSize);
             const energy = window.reduce((sum, sample) => sum + Math.abs(sample) * 255, 0) / windowSize;
             energyLevels.push(energy);
         }
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         if (energyLevels.length > 0) {
             energyLevels.sort((a, b) => a - b);
             const percentile20 = energyLevels[Math.floor(energyLevels.length * 0.2)] || 10;
             const percentile60 = energyLevels[Math.floor(energyLevels.length * 0.6)] || 25;
+<<<<<<< HEAD
             this.silenceThreshold = Math.max(8, percentile20 * 0.8);
             this.voiceThreshold = Math.max(15, percentile60 * 0.9);
+=======
+            
+            this.silenceThreshold = Math.max(8, percentile20 * 0.8);
+            this.voiceThreshold = Math.max(15, percentile60 * 0.9);
+            
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
             console.log(`Thresholds calibrados - Silêncio: ${this.silenceThreshold.toFixed(1)}, Voz: ${this.voiceThreshold.toFixed(1)}`);
         }
     }
@@ -323,19 +465,35 @@ async loadSVGs() {
         if (!this.audioContext) this.setupAudioContext();
         this.updateStatus('Gravando áudio...');
         this.updateButtonStates({ play: false, pause: false, record: false, stop: true, generate: false, download: false });
+<<<<<<< HEAD
+=======
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
                 this.recordingStream = stream;
                 this.mediaRecorder = new MediaRecorder(stream);
                 this.recordedChunks = [];
+<<<<<<< HEAD
+=======
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
                 this.mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) {
                         this.recordedChunks.push(event.data);
                     }
                 };
+<<<<<<< HEAD
                 this.mediaRecorder.onstop = async () => {
                     const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
                     const arrayBuffer = await blob.arrayBuffer();
+=======
+
+                this.mediaRecorder.onstop = async () => {
+                    const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
+                    const arrayBuffer = await blob.arrayBuffer();
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
                     try {
                         const buffer = await this.audioContext.decodeAudioData(arrayBuffer);
                         this.audioBuffer = buffer;
@@ -343,6 +501,7 @@ async loadSVGs() {
                         this.updateStatus('Gravação concluída!');
                         this.elements.audioInfo.style.display = 'block';
                         this.elements.audioInfo.textContent = `Gravação concluída | Duração: ${this.duration.toFixed(2)}s`;
+<<<<<<< HEAD
                         this.updateButtonStates({
                             play: this.svgsLoaded,
                             pause: false,
@@ -350,6 +509,15 @@ async loadSVGs() {
                             stop: false,
                             generate: this.svgsLoaded,
                             download: false
+=======
+                        this.updateButtonStates({ 
+                            play: this.svgsLoaded, 
+                            pause: false, 
+                            record: true, 
+                            stop: false, 
+                            generate: this.svgsLoaded, 
+                            download: false 
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
                         });
                         this.calibrateAudioThresholds();
                     } catch (err) {
@@ -357,6 +525,10 @@ async loadSVGs() {
                         console.error('Error decoding recorded audio:', err);
                     }
                 };
+<<<<<<< HEAD
+=======
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
                 this.mediaRecorder.start();
             })
             .catch(error => {
@@ -370,28 +542,42 @@ async loadSVGs() {
             this.mediaRecorder.stop();
             this.recordingStream.getTracks().forEach(track => track.stop());
         }
+<<<<<<< HEAD
         // Parar o piscar automático durante a gravação, se estiver ativo
         if (this.isAutoBlinking) {
             this.stopAutoBlinking();
         }
+=======
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
     }
 
     playAudio() {
         if (!this.audioBuffer || !this.svgsLoaded) return;
         this.updateStatus('Reproduzindo...');
         this.updateButtonStates({ play: false, pause: true, record: false, stop: false, generate: false, download: false });
+<<<<<<< HEAD
         if (this.source) {
             this.source.stop();
         }
+=======
+
+        if (this.source) {
+            this.source.stop();
+        }
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Reset do sistema de fonemas
         this.phonemeHistory = [];
         this.lastPhoneme = 'silence';
         this.phonemeDuration = 0;
         this.lastTransitionTime = 0;
 
+<<<<<<< HEAD
         // --- Reset do sistema de expressão dos olhos para o início ---
         this.updateEyesBasedOnTimeline(0);
 
+=======
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.source = this.audioContext.createBufferSource();
         this.source.buffer = this.audioBuffer;
         this.analyser = this.audioContext.createAnalyser();
@@ -399,6 +585,10 @@ async loadSVGs() {
         this.analyser.smoothingTimeConstant = 0.3; // Menos suavização para mais responsividade
         this.source.connect(this.analyser);
         this.analyser.connect(this.audioContext.destination);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.source.onended = () => {
             if (!this.isRecordingVideo) {
                 this.updateStatus('Pronto para começar');
@@ -406,6 +596,7 @@ async loadSVGs() {
                 this.drawCharacterOnCanvas('silence');
             }
         };
+<<<<<<< HEAD
         this.startTime = this.audioContext.currentTime - this.pauseTime;
         this.source.start(0, this.pauseTime);
         this.isPlaying = true;
@@ -416,6 +607,12 @@ async loadSVGs() {
             this.startAutoBlinking();
         }
 
+=======
+
+        this.startTime = this.audioContext.currentTime - this.pauseTime;
+        this.source.start(0, this.pauseTime);
+        this.isPlaying = true;
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.animate();
     }
 
@@ -428,22 +625,33 @@ async loadSVGs() {
         this.updateStatus('Pausado');
         this.updateButtonStates({ play: true, pause: false, record: false, stop: false, generate: true, download: false });
         this.drawCharacterOnCanvas('silence');
+<<<<<<< HEAD
 
         // Parar o piscar automático quando pausar
         if (this.isAutoBlinking) {
             this.stopAutoBlinking();
         }
+=======
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
     }
 
     // Análise melhorada de fonemas
     getPhonemeFromData(dataArray) {
         const currentTime = this.audioContext.currentTime - this.startTime;
+<<<<<<< HEAD
         // Calcular energia total
         const totalEnergy = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+=======
+        
+        // Calcular energia total
+        const totalEnergy = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Detectar silêncio
         if (totalEnergy < this.silenceThreshold) {
             return this.updatePhonemeWithTiming('silence', currentTime);
         }
+<<<<<<< HEAD
         // Dividir espectro em bandas mais específicas
         const veryLowFreq = this.getFreqAverage(dataArray, 0, 4);
         const lowFreq = this.getFreqAverage(dataArray, 5, 12);
@@ -452,10 +660,26 @@ async loadSVGs() {
         const midHighFreq = this.getFreqAverage(dataArray, 51, 80);
         const highFreq = this.getFreqAverage(dataArray, 81, 110);
         const veryHighFreq = this.getFreqAverage(dataArray, 111, 127);
+=======
+
+        // Dividir espectro em bandas mais específicas
+        const veryLowFreq = this.getFreqAverage(dataArray, 0, 4);      
+        const lowFreq = this.getFreqAverage(dataArray, 5, 12);         
+        const lowMidFreq = this.getFreqAverage(dataArray, 13, 25);     
+        const midFreq = this.getFreqAverage(dataArray, 26, 50);        
+        const midHighFreq = this.getFreqAverage(dataArray, 51, 80);    
+        const highFreq = this.getFreqAverage(dataArray, 81, 110);      
+        const veryHighFreq = this.getFreqAverage(dataArray, 111, 127); 
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Calcular características espectrais
         const spectralCentroid = this.calculateSpectralCentroid(dataArray);
         const spectralRolloff = this.calculateSpectralRolloff(dataArray, 0.85);
         const zeroCrossingRate = this.calculateZeroCrossingRate(dataArray);
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Sistema de pontuação
         const scores = {
             'a': this.scorePhoneme_A(veryLowFreq, lowFreq, lowMidFreq, midFreq, totalEnergy, spectralCentroid),
@@ -469,21 +693,37 @@ async loadSVGs() {
             'ch': this.scorePhoneme_CH(highFreq, veryHighFreq, zeroCrossingRate),
             'q': this.scorePhoneme_Q(lowMidFreq, midFreq, highFreq)
         };
+<<<<<<< HEAD
         // Encontrar fonema com maior pontuação
         let maxScore = 0;
         let detectedPhoneme = 'silence';
+=======
+
+        // Encontrar fonema com maior pontuação
+        let maxScore = 0;
+        let detectedPhoneme = 'silence';
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         for (const [phoneme, score] of Object.entries(scores)) {
             if (score > maxScore) {
                 maxScore = score;
                 detectedPhoneme = phoneme;
             }
         }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Aplicar limiar mínimo e lógica de fallback
         if (maxScore < 2) {
             detectedPhoneme = this.fallbackPhonemeDetection(
                 veryLowFreq, lowFreq, midFreq, highFreq, totalEnergy
             );
         }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         return this.updatePhonemeWithTiming(detectedPhoneme, currentTime);
     }
 
@@ -494,35 +734,67 @@ async loadSVGs() {
             this.phonemeDuration += 0.016; // Aproximadamente 60fps
             return this.lastPhoneme;
         }
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Verificar cooldown de transição
         if (currentTime - this.lastTransitionTime < this.transitionCooldown) {
             this.phonemeDuration += 0.016;
             return this.lastPhoneme;
         }
+<<<<<<< HEAD
         // Verificar duração mínima (exceto para silêncio entrando ou saindo)
         const isTransitionToSilence = newPhoneme === 'silence';
         const isTransitionFromSilence = this.lastPhoneme === 'silence';
         if (!isTransitionToSilence && !isTransitionFromSilence &&
+=======
+        
+        // Verificar duração mínima (exceto para silêncio entrando ou saindo)
+        const isTransitionToSilence = newPhoneme === 'silence';
+        const isTransitionFromSilence = this.lastPhoneme === 'silence';
+        
+        if (!isTransitionToSilence && !isTransitionFromSilence && 
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
             this.phonemeDuration < this.minPhonemeDuration) {
             this.phonemeDuration += 0.016;
             return this.lastPhoneme;
         }
+<<<<<<< HEAD
         // Aplicar transição suave para alguns casos
         const smoothedPhoneme = this.applySmoothTransition(this.lastPhoneme, newPhoneme, this.phonemeDuration);
+=======
+        
+        // Aplicar transição suave para alguns casos
+        const smoothedPhoneme = this.applySmoothTransition(this.lastPhoneme, newPhoneme, this.phonemeDuration);
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Registrar no histórico
         this.phonemeHistory.push({
             phoneme: this.lastPhoneme,
             duration: this.phonemeDuration,
             timestamp: currentTime - this.phonemeDuration
         });
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Limitar histórico
         if (this.phonemeHistory.length > 30) {
             this.phonemeHistory.shift();
         }
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Atualizar estado
         this.lastPhoneme = smoothedPhoneme;
         this.phonemeDuration = 0;
         this.lastTransitionTime = currentTime;
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         return smoothedPhoneme;
     }
 
@@ -532,7 +804,11 @@ async loadSVGs() {
         if (duration < 0.06) {
             const transitionMap = {
                 'silence_a': 'm',
+<<<<<<< HEAD
                 'silence_e': 'ch',
+=======
+                'silence_e': 'ch', 
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
                 'silence_i': 'i',
                 'silence_o': 'm',
                 'silence_u': 'm',
@@ -543,9 +819,17 @@ async loadSVGs() {
                 'a_e': duration < 0.03 ? 'a' : 'e',
                 'e_a': duration < 0.03 ? 'e' : 'a'
             };
+<<<<<<< HEAD
             const key = `${fromPhoneme}_${toPhoneme}`;
             return transitionMap[key] || toPhoneme;
         }
+=======
+            
+            const key = `${fromPhoneme}_${toPhoneme}`;
+            return transitionMap[key] || toPhoneme;
+        }
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         return toPhoneme;
     }
 
@@ -630,16 +914,28 @@ async loadSVGs() {
     calculateSpectralCentroid(dataArray) {
         let numerator = 0;
         let denominator = 0;
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         for (let i = 0; i < dataArray.length; i++) {
             numerator += i * dataArray[i];
             denominator += dataArray[i];
         }
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         return denominator > 0 ? numerator / (denominator * dataArray.length) : 0;
     }
 
     calculateSpectralRolloff(dataArray, threshold = 0.85) {
         const totalEnergy = dataArray.reduce((a, b) => a + b, 0);
         const targetEnergy = totalEnergy * threshold;
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         let cumulativeEnergy = 0;
         for (let i = 0; i < dataArray.length; i++) {
             cumulativeEnergy += dataArray[i];
@@ -647,33 +943,59 @@ async loadSVGs() {
                 return i / dataArray.length;
             }
         }
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         return 1.0;
     }
 
     calculateZeroCrossingRate(dataArray) {
         let crossings = 0;
         const mean = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+<<<<<<< HEAD
         for (let i = 1; i < dataArray.length; i++) {
             if ((dataArray[i] - mean) * (dataArray[i - 1] - mean) < 0) {
                 crossings++;
             }
         }
+=======
+        
+        for (let i = 1; i < dataArray.length; i++) {
+            if ((dataArray[i] - mean) * (dataArray[i-1] - mean) < 0) {
+                crossings++;
+            }
+        }
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         return crossings / dataArray.length;
     }
 
     fallbackPhonemeDetection(veryLowFreq, lowFreq, midFreq, highFreq, totalEnergy) {
         const total = veryLowFreq + lowFreq + midFreq + highFreq;
         if (total === 0) return 'silence';
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         const ratios = {
             veryLow: veryLowFreq / total,
             low: lowFreq / total,
             mid: midFreq / total,
             high: highFreq / total
         };
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         if (ratios.veryLow > 0.4) return Math.random() > 0.5 ? 'u' : 'o';
         if (ratios.high > 0.4) return Math.random() > 0.5 ? 'i' : 'ch';
         if (ratios.mid > 0.4) return Math.random() > 0.5 ? 'e' : 'a';
         if (ratios.low > 0.4) return Math.random() > 0.5 ? 'a' : 'm';
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         // Variação mais inteligente baseada no histórico
         return this.getVariedPhoneme();
     }
@@ -682,6 +1004,7 @@ async loadSVGs() {
         const recentPhonemes = this.phonemeHistory.slice(-5).map(h => h.phoneme);
         const vowels = ['a', 'e', 'i', 'o', 'u'];
         const consonants = ['m', 'l', 'r', 'ch'];
+<<<<<<< HEAD
         // Evitar repetição excessiva
         const lastPhoneme = recentPhonemes[recentPhonemes.length - 1] || 'silence';
         if (vowels.includes(lastPhoneme)) {
@@ -694,6 +1017,22 @@ async loadSVGs() {
             return Math.random() > 0.3 ?
                 vowels[Math.floor(Math.random() * vowels.length)] :
                 consonants[Math.floor(Math.random() * consonants.length)];
+=======
+        
+        // Evitar repetição excessiva
+        const lastPhoneme = recentPhonemes[recentPhonemes.length - 1] || 'silence';
+        
+        if (vowels.includes(lastPhoneme)) {
+            // Se a última foi vogal, alternar para consoante às vezes
+            return Math.random() > 0.7 ? 
+                   consonants[Math.floor(Math.random() * consonants.length)] :
+                   vowels[Math.floor(Math.random() * vowels.length)];
+        } else {
+            // Se a última foi consoante, preferir vogal
+            return Math.random() > 0.3 ?
+                   vowels[Math.floor(Math.random() * vowels.length)] :
+                   consonants[Math.floor(Math.random() * consonants.length)];
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         }
     }
 
@@ -702,10 +1041,15 @@ async loadSVGs() {
         const validStart = Math.max(0, start);
         let sum = 0;
         let count = 0;
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         for (let i = validStart; i <= validEnd; i++) {
             sum += dataArray[i];
             count++;
         }
+<<<<<<< HEAD
         return count > 0 ? sum / count : 0;
     }
 
@@ -821,11 +1165,18 @@ async loadSVGs() {
         this.currentEyes = newExpression;
     }
 
+=======
+        
+        return count > 0 ? sum / count : 0;
+    }
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
     animate() {
         if (!this.isPlaying) {
             cancelAnimationFrame(this.animationFrameId);
             return;
         }
+<<<<<<< HEAD
         const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(dataArray);
         const phoneme = this.getPhonemeFromData(dataArray);
@@ -846,6 +1197,27 @@ async loadSVGs() {
         if (!this.svgsLoaded) return;
         const canvas = this.elements.previewCanvas;
         const ctx = this.ctx;
+=======
+
+        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(dataArray);
+
+        const phoneme = this.getPhonemeFromData(dataArray);
+        this.drawCharacterOnCanvas(phoneme);
+
+        const progress = ((this.audioContext.currentTime - this.startTime) / this.duration) * 100;
+        this.elements.progressBar.style.width = `${Math.min(progress, 100)}%`;
+
+        this.animationFrameId = requestAnimationFrame(() => this.animate());
+    }
+
+    drawCharacterOnCanvas(mouthShape) {
+        if (!this.svgsLoaded) return;
+
+        const canvas = this.elements.previewCanvas;
+        const ctx = this.ctx;
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Desenhar background se necessário
@@ -854,6 +1226,7 @@ async loadSVGs() {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
+<<<<<<< HEAD
         // --- Calcular dimensões e posições ---
         const mouthImage = this.mouthImages[mouthShape] || this.mouthImages['silence'];
         const eyeImage = this.eyeExpressions[this.currentEyes] || this.eyeExpressions['neutral'];
@@ -898,10 +1271,26 @@ async loadSVGs() {
             ctx.save();
             if (this.isMouthUpsideDown) {
                 // Aplicar transformação para inverter verticalmente a boca
+=======
+        // Desenhar apenas a boca SVG
+        const mouthImage = this.mouthImages[mouthShape] || this.mouthImages['silence'];
+        if (mouthImage) {
+            const mouthWidth = 200;
+            const mouthHeight = 150;
+            const x = (canvas.width - mouthWidth) / 2;
+            const y = (canvas.height - mouthHeight) / 2;
+            
+            // Salvar o estado atual do contexto
+            ctx.save();
+            
+            if (this.isMouthUpsideDown) {
+                // Aplicar transformação para inverter verticalmente
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
                 ctx.translate(canvas.width / 2, canvas.height / 2);
                 ctx.scale(1, -1); // Inverter verticalmente
                 ctx.translate(-canvas.width / 2, -canvas.height / 2);
             }
+<<<<<<< HEAD
             ctx.drawImage(mouthImage, mouthX, mouthY, mouthWidth, mouthHeight);
             // Restaurar o estado do contexto para a boca
             ctx.restore();
@@ -915,6 +1304,15 @@ async loadSVGs() {
         // --- Restaurar estado do contexto ---
         ctx.restore();
 
+=======
+            
+            ctx.drawImage(mouthImage, x, y, mouthWidth, mouthHeight);
+            
+            // Restaurar o estado do contexto
+            ctx.restore();
+        }
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.currentMouth = mouthShape;
     }
 
@@ -928,6 +1326,10 @@ async loadSVGs() {
         const selectedOption = event.currentTarget;
         selectedOption.classList.add('active');
         this.backgroundType = selectedOption.dataset.bg;
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.drawCharacterOnCanvas(this.currentMouth);
     }
 
@@ -936,30 +1338,51 @@ async loadSVGs() {
             this.updateStatus('Aguarde o carregamento dos recursos', 'error');
             return;
         }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.updateStatus('Gerando vídeo...', 'info');
         this.updateButtonStates({ play: false, pause: false, record: false, stop: false, generate: false, download: false });
         this.isRecordingVideo = true;
         this.pauseTime = 0;
 
+<<<<<<< HEAD
         // --- Reset do sistema de expressão dos olhos para o início ANTES de gravar ---
         this.updateEyesBasedOnTimeline(0);
 
         const stream = this.elements.previewCanvas.captureStream(30);
         this.mediaRecorderVideo = new MediaRecorder(stream, { mimeType: 'video/webm' });
         this.videoFrames = [];
+=======
+        const stream = this.elements.previewCanvas.captureStream(30);
+        this.mediaRecorderVideo = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        this.videoFrames = [];
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.mediaRecorderVideo.ondataavailable = (event) => {
             if (event.data.size > 0) {
                 this.videoFrames.push(event.data);
             }
         };
+<<<<<<< HEAD
+=======
+
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
         this.mediaRecorderVideo.onstop = () => {
             this.isRecordingVideo = false;
             this.elements.downloadBtn.style.display = 'inline-flex';
             this.updateButtonStates({ play: true, pause: false, record: true, stop: false, generate: true, download: true });
             this.updateStatus('Vídeo gerado com sucesso!', 'success');
         };
+<<<<<<< HEAD
         this.mediaRecorderVideo.start();
         this.playAudio(); // Isso agora chama updateEyesBasedOnTimeline(0) internamente
+=======
+
+        this.mediaRecorderVideo.start();
+        this.playAudio();
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
     }
 
     downloadVideo() {
@@ -978,4 +1401,8 @@ async loadSVGs() {
 
 document.addEventListener('DOMContentLoaded', () => {
     new LipSyncApp();
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> 424f1e8c51d4bcc6e4f23bb5f4f944a084d4db03
