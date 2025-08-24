@@ -1,0 +1,489 @@
+/* =========================================
+   🎨 Variáveis globais
+   ========================================= */
+:root {
+  /* Cores principais */
+  --color-primary: #667eea;
+  --color-secondary: #764ba2;
+  --color-accent: #2575fc;
+  --color-success: #28a745;
+  --color-danger: #dc3545;
+  --color-gray: #6c757d;
+  /* Backgrounds */
+  --bg-light: #f8f9fa;
+  --bg-lighter: #f0f4ff;
+  /* Texto */
+  --text-dark: #333;
+  --text-muted: #444;
+  /* Espaçamento */
+  --spacing-xs: 5px;
+  --spacing-sm: 10px;
+  --spacing-md: 15px;
+  --spacing-lg: 20px;
+  --spacing-xl: 30px;
+  /* Bordas */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 15px;
+  --radius-xl: 20px;
+  /* Sombra */
+  --shadow-sm: 0 5px 15px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 15px 35px rgba(0, 0, 0, 0.2);
+  /* Tipografia */
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.5rem;
+  --font-size-xl: 2.5rem;
+}
+/* =========================================
+   📄 Reset global
+   ========================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-family);
+}
+/* =========================================
+   🌐 Layout base
+   ========================================= */
+body {
+  background: linear-gradient(135deg, #6a11cb 0%, var(--color-accent) 100%);
+  min-height: 100vh;
+  padding: var(--spacing-lg);
+  color: var(--text-dark);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.container {
+  max-width: 1200px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+/* =========================================
+   📌 Cabeçalho
+   ========================================= */
+.header {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  color: white;
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+.header h1 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-sm);
+}
+.header p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+/* =========================================
+   📦 Conteúdo principal
+   ========================================= */
+.content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-xl);
+}
+/* Responsividade */
+@media (max-width: 900px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+}
+/* =========================================
+   📦 Painéis
+   ========================================= */
+.panel {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+}
+.panel-title {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-lg);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.panel-title svg {
+  width: 24px;
+  height: 24px;
+}
+/* =========================================
+   📂 Upload de arquivos
+   ========================================= */
+.file-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+.file-input {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  width: 100%;
+}
+.file-input input[type="file"] {
+  position: absolute;
+  left: -9999px; /* Esconde o input */
+}
+.file-input-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  color: white;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+.file-input-label:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+/* =========================================
+   🔘 Botões
+   ========================================= */
+.control-group {
+  margin-bottom: var(--spacing-lg);
+}
+.control-group h3 {
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+.button-group {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: var(--font-size-base);
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  color: white;
+}
+.btn-secondary {
+  background: var(--color-gray);
+  color: white;
+}
+.btn-success {
+  background: var(--color-success);
+  color: white;
+}
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+/* --- Estilo específico para botões de posição do personagem --- */
+.btn-position {
+    flex: 1; /* Faz os botões ocuparem espaço igual */
+    min-width: 120px; /* Largura mínima para os botões */
+}
+/* --- Estilo específico para botão de piscar (ativo/inativo) --- */
+.btn-blink-active {
+    background: var(--color-success); /* Verde para indicar ativo */
+    color: white;
+    /* Ou use a classe .btn-active se preferir */
+    /* border: 2px solid var(--color-success); */
+}
+/* Estilo para os botões de gênero (pode reutilizar btn-position se quiser) */
+.btn-gender {
+    flex: 1; /* Faz os botões ocuparem espaço igual */
+    min-width: 120px; /* Largura mínima para os botões */
+}
+/* =========================================
+   👁️‍🗨️ Estilos para Controles de Expressão dos Olhos
+   ========================================= */
+/* Estilo para os controles individuais de expressão na timeline */
+.expression-control {
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    flex-wrap: wrap; /* Permite que label e select quebrem linha em telas pequenas */
+    align-items: center;
+    gap: var(--spacing-xs); /* Pequeno espaço entre label e select */
+}
+.expression-control label {
+    font-weight: 500;
+    min-width: 80px; /* Define uma largura mínima para os labels */
+}
+.expression-control select {
+    flex-grow: 1; /* Faz o select ocupar o espaço restante */
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid #ccc;
+    border-radius: var(--radius-sm);
+    background-color: white;
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+}
+/* =========================================
+   ℹ️ Informações do áudio
+   ========================================= */
+.audio-info {
+  background: var(--bg-lighter);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-sm);
+  margin: var(--spacing-md) 0;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+/* =========================================
+   📊 Barra de progresso
+   ========================================= */
+.progress-container {
+  margin: var(--spacing-lg) 0;
+}
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background: #e9ecef;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  width: 0%;
+  transition: width 0.3s ease;
+}
+/* =========================================
+   📢 Status
+   ========================================= */
+.status {
+  text-align: center;
+  margin-top: var(--spacing-md);
+  font-weight: 600;
+  color: var(--color-primary);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  background: var(--bg-lighter);
+}
+.status-error {
+  color: var(--color-danger);
+  background: rgba(220, 53, 69, 0.1);
+}
+.status-success {
+  color: var(--color-success);
+  background: rgba(40, 167, 69, 0.1);
+}
+.status-info {
+  color: var(--color-primary);
+  background: var(--bg-lighter);
+}
+/* =========================================
+   🖼️ Pré-visualização
+   ========================================= */
+.preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+.character-wrapper {
+  width: 100%;
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0),
+              linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 3px solid #ddd;
+}
+#previewCanvas {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+/* =========================================
+   🖌️ Seletor de background
+   ========================================= */
+.background-selector {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+.bg-option {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid #ddd;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  transition: all 0.3s ease;
+  background: white;
+}
+.bg-option:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+.bg-option.active {
+  border-color: var(--color-primary);
+  background: var(--bg-lighter);
+  color: var(--color-primary);
+}
+/* =========================================
+   📖 Instruções
+   ========================================= */
+.instructions {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background: var(--bg-light);
+  border-radius: var(--radius-lg);
+}
+.instructions h3 {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-muted);
+}
+.instructions ol {
+  margin-left: var(--spacing-lg);
+  line-height: 1.6;
+}
+.instructions li {
+  margin-bottom: var(--spacing-sm);
+}
+/* =========================================
+   ⚡ Rodapé
+   ========================================= */
+.footer {
+  text-align: center;
+  padding: var(--spacing-lg);
+  color: var(--color-gray);
+  font-size: 0.9rem;
+  border-top: 1px solid #eee;
+}
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-gray);
+  text-decoration: none;
+  margin-top: var(--spacing-sm);
+  transition: color 0.3s ease;
+}
+.github-link:hover {
+  color: var(--color-primary);
+}
+/* =========================================
+   📱 Responsividade adicional
+   ========================================= */
+@media (max-width: 600px) {
+  body {
+    padding: var(--spacing-sm);
+  }
+  .header {
+    padding: var(--spacing-lg);
+  }
+  .header h1 {
+    font-size: 2rem;
+  }
+  .content {
+    padding: var(--spacing-lg);
+    gap: var(--spacing-lg);
+  }
+  .button-group {
+    flex-direction: column;
+  }
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .character-wrapper {
+    height: 250px;
+  }
+  .background-selector {
+    flex-direction: column;
+  }
+  /* Ajustes para controles de expressão em telas pequenas */
+  .expression-control {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .expression-control label {
+    min-width: auto;
+    margin-bottom: var(--spacing-xs);
+  }
+  .expression-control select {
+     width: 100%; /* Faz o select ocupar 100% da largura em telas pequenas */
+  }
+}
+/* =========================================
+   🎨 Melhorias visuais para a boca
+   ========================================= */
+.mouth-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+/* Efeito de pulsação sutil durante a reprodução */
+@keyframes mouth-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+.mouth-active {
+  animation: mouth-pulse 0.5s ease-in-out infinite;
+}
+/* Indicador de carregamento dos SVGs */
+.loading-spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--color-primary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+/* Estilo para botões ativos */
+.btn-active {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--color-primary);
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

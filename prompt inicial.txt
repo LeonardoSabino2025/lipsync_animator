@@ -1,0 +1,19 @@
+Estou pensando em criar um app (ou website online) que faça o seguinte: utilize um set de imagens, na verdade, seriam bocas. Bocas reais, bocas de desenhos tipo cartoon ou tipo CGI estilo Disney Pixar.
+
+A Ideia é que, a pessoa suba um áudio (uma voz ou duas) e a boca faça o movimento daquele áudio como se tivesse falando. Tipo, uma imagem para "A", outra para o "E"... as imagens seriam diferenciadas para dar a sensação de dublagem perfeita, de acordo com a sonoridade do audio.
+
+O audio pode ser um MP3 ou poderia ser captado na hora pelo microfone.
+
+A boca iria funcionar sozinha por sobre um fundo verde (ou preto para criar vídeos do tipo alpha).
+
+Aliás seria possível criar o vídeo em canal alpha? Não sei.
+
+A idéia é a de gerar as bocas para o pessoal que quer criar "memes" do tipo desenho animado sabe? Pega, sobe o arquivo de áudio, gera o videozinho da boca e aplica em uma camada por cima de outro desenho ou foto em um editor de vídeo e vai tentar ganhar dinheiro com vídeos divertidos.
+
+Não sei sequer se você vai entender minha ideia. Bem antes de tudo, preciso saber:
+
+1) Se já existe algo do tipo, 100% funcional e gratuito;
+2) Se com sua ajuda (ou de outras LLM´s) conseguiria fazer e mais, se tratando de um site, adicionar o google adsense;
+3) Se conseguiríamos fazer com que, consiga captar até 3 vozes diferentes, ou se, para cada voz isolada, a pessoa precisaria enviar o áudio separado;
+4) Se no final gera um vídeo para ser baixado e a pessoa usar como quiser;
+5) se dá para transformar em app do IOS (mesmo que eu não tenha nenhum dispositivo Apple aqui comigo.

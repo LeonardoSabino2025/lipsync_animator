@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lip Sync Meme Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎤 Lip Sync Meme Generator</h1>
+            <p>Crie vídeos engraçados com sincronização labial automática!</p>
+        </header>
+
+        <div class="content">
+            <!-- Painel de Controles -->
+            <div class="panel">
+                <h2 class="panel-title"> <!-- Ícone de controle pode ser adicionado aqui --> Controles</h2>
+
+                <!-- Upload de Arquivo -->
+                <div class="file-upload">
+                    <input type="file" id="audioFile" class="file-input" accept="audio/*">
+                    <label for="audioFile" class="file-input-label">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                        </svg>
+                        Escolher Arquivo de Áudio
+                    </label>
+                </div>
+
+                <!-- Informações do Áudio -->
+                <div id="audioInfo" class="audio-info" style="display: none;"></div>
+
+                <!-- Barra de Progresso -->
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progressBar" class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <!-- Botões de Controle -->
+                <div class="control-group">
+                    <h3>Controles de Áudio</h3>
+                    <div class="button-group">
+                        <button id="recordBtn" class="btn btn-primary">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 14a1 1 0 0 1-1-1V4.414l-1.293 1.293a1 1 0 0 1-1.414-1.414l3-3a1 1 0 0 1 1.414 0l3 3a1 1 0 0 1-1.414 1.414L9 4.414V13a1 1 0 0 1-1 1z"/>
+                                <path d="M3 7a5 5 0 0 1 10 0v5a5 5 0 0 1-10 0V7zm5-3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V7a3 3 0 0 0-3-3z"/>
+                            </svg>
+                            Gravar
+                        </button>
+                        <button id="stopBtn" class="btn btn-danger" disabled>
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5z"/>
+                            </svg>
+                            Parar
+                        </button>
+                        <button id="playBtn" class="btn btn-success" disabled>
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+                            </svg>
+                            Reproduzir
+                        </button>
+                        <button id="pauseBtn" class="btn btn-secondary" disabled>
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/>
+                            </svg>
+                            Pausar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Controles de Expressão (Boca) -->
+                <div class="control-group">
+                    <h3>Expressão da Boca</h3>
+                    <div class="button-group">
+                        <button id="happyBtn" class="btn btn-secondary btn-active">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM7 6.5C7 7.328 6.328 8 5.5 8S4 7.328 4 6.5 4.672 5 5.5 5 7 5.672 7 6.5zm5 0c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5S9.672 5 10.5 5 12 5.672 12 6.5zm-5.5 4.207c.58 0 .92.34.92.92 0 .58-.34.92-.92.92-.58 0-.92-.34-.92-.92 0-.58.34-.92.92-.92z"/>
+                            </svg>
+                            Boca Normal
+                        </button>
+                        <button id="sadBtn" class="btn btn-secondary">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zM7 6.5C7 7.328 6.328 8 5.5 8S4 7.328 4 6.5 4.672 5 5.5 5 7 5.672 7 6.5zm5 0c0 .828-.672 1.5-1.5 1.5s-1.5-.672-1.5-1.5S9.672 5 10.5 5 12 5.672 12 6.5zm-5.5 4.207c.58 0 .92.34.92.92 0 .58-.34.92-.92.92-.58 0-.92-.34-.92-.92 0-.58.34-.92.92-.92z"/>
+                            </svg>
+                            Boca Invertida
+                        </button>
+                    </div>
+                </div>
+
+                <!-- --- Novos Controles para Olhos --- -->
+                <!-- Painel de Controle de Expressão (Olhos) -->
+                 <!-- Controle de Gênero do Personagem -->
+<div class="control-group">
+    <h3>Gênero do Personagem</h3>
+    <div class="button-group">
+        <button id="genderMaleBtn" class="btn btn-secondary btn-gender btn-active" data-gender="masc">Masculino</button>
+        <button id="genderFemaleBtn" class="btn btn-secondary btn-gender" data-gender="fem">Feminino</button>
+    </div>
+</div>
+                <div class="panel">
+                    <h2 class="panel-title">
+                        <!-- Adicione um ícone SVG se desejar -->
+                        Expressão dos Olhos
+                    </h2>
+
+                    <!-- Controle de Posição do Personagem -->
+                    <div class="control-group">
+                        <h3>Posição do Personagem</h3>
+                        <div class="button-group">
+                            <button id="positionLeftBtn" class="btn btn-secondary btn-position btn-active" data-position="left">Olhando para Direita</button>
+                            <button id="positionRightBtn" class="btn btn-secondary btn-position" data-position="right">Olhando para Esquerda</button>
+                        </div>
+                    </div>
+
+                    <!-- Controle de Piscar Automático -->
+                    <div class="control-group">
+                        <h3>Piscar Automático</h3>
+                        <div class="button-group">
+                            <button id="blinkToggleBtn" class="btn btn-secondary">Ativar</button>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Simples de Expressão (Exemplo com momentos fixos) -->
+                    <!-- Pode ser expandido para uma interface mais complexa -->
+                    <div class="control-group">
+                        <h3>Expressões ao Longo do Tempo</h3>
+                        <div class="expression-timeline">
+                            <div class="expression-control">
+                                <label for="exprAt0s">Início (0s):</label>
+                                <select id="exprAt0s" class="eye-expression-selector">
+                                    <option value="neutral">Neutro</option>
+                                    <option value="happy">Feliz</option>
+                                    <option value="sad">Triste</option>
+                                    <option value="curious">Curioso</option>
+                                    <option value="angry">Chateado</option>
+                                    <option value="closed">Olhos Fechados</option>
+                                    <option value="enchanted">Encantado</option>
+                                    <option value="wink">Piscando um Olho</option>
+                                </select>
+                            </div>
+                             <div class="expression-control">
+                                <label for="exprAt2s">2s:</label>
+                                <select id="exprAt2s" class="eye-expression-selector">
+                                    <option value="neutral">Neutro</option>
+                                    <option value="happy">Feliz</option>
+                                    <option value="sad">Triste</option>
+                                    <option value="curious">Curioso</option>
+                                    <option value="angry">Chateado</option>
+                                    <option value="closed">Olhos Fechados</option>
+                                    <option value="enchanted">Encantado</option>
+                                    <option value="wink">Piscando um Olho</option>
+                                </select>
+                            </div>
+                            <div class="expression-control">
+                                <label for="exprAt5s">5s:</label>
+                                <select id="exprAt5s" class="eye-expression-selector">
+                                    <option value="neutral">Neutro</option>
+                                    <option value="happy">Feliz</option>
+                                    <option value="sad">Triste</option>
+                                    <option value="curious">Curioso</option>
+                                    <option value="angry">Chateado</option>
+                                    <option value="closed">Olhos Fechados</option>
+                                    <option value="enchanted">Encantado</option>
+                                    <option value="wink">Piscando um Olho</option>
+                                </select>
+                            </div>
+                             <div class="expression-control">
+                                <label for="exprAt10s">10s:</label>
+                                <select id="exprAt10s" class="eye-expression-selector">
+                                    <option value="neutral">Neutro</option>
+                                    <option value="happy">Feliz</option>
+                                    <option value="sad">Triste</option>
+                                    <option value="curious">Curioso</option>
+                                    <option value="angry">Chateado</option>
+                                    <option value="closed">Olhos Fechados</option>
+                                    <option value="enchanted">Encantado</option>
+                                    <option value="wink">Piscando um Olho</option>
+                                </select>
+                            </div>
+                            <!-- Adicione mais pontos conforme necessário -->
+                        </div>
+                    </div>
+                </div>
+                <!-- --- Fim dos Novos Controles para Olhos --- -->
+
+                <!-- Botões de Geração -->
+                <div class="control-group">
+                    <h3>Gerar Vídeo</h3>
+                    <div class="button-group">
+                        <button id="generateBtn" class="btn btn-primary" disabled>
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                            Gerar Vídeo
+                        </button>
+                        <button id="downloadBtn" class="btn btn-success" style="display: none;">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                            </svg>
+                            Baixar Vídeo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div id="status" class="status">Aguardando áudio...</div>
+            </div>
+
+            <!-- Painel de Pré-visualização -->
+            <div class="panel">
+                <h2 class="panel-title">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M0 4s3-2 8-2 8 2 8 2v8s-3 2-8 2-8-2-8-2V4zm8-2a1 1 0 0 0-1 1v.5a1 1 0 0 0 2 0V3a1 1 0 0 0-1-1z"/>
+                        <path d="M14 6a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12zM2 6v5h12V6H2z"/>
+                    </svg>
+                    Pré-visualização
+                </h2>
+                <div class="preview-container">
+                    <div class="character-wrapper">
+                        <canvas id="previewCanvas" width="600" height="400"></canvas>
+                    </div>
+                    <div class="background-selector">
+                        <div class="bg-option active" data-bg="green">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M0 0h16v16H0V0z"/>
+                            </svg>
+                            Fundo Verde
+                        </div>
+                        <div class="bg-option" data-bg="transparent">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M13.5 5a.5.5 0 0 1 .5.5V7h1.5a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0V8h-1.5a.5.5 0 0 1 0-1H13V5.5a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M3.5 1a.5.5 0 0 1 .5.5v13a.5.5 0 0 1-1 0v-13a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M1 3.5a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13a.5.5 0 0 1-.5-.5z"/>
+                            </svg>
+                            Transparente
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Desenvolvido com ❤️ para criar memes incríveis!</p>
+            <a href="https://github.com/seu-usuario/lipsync-meme-generator" target="_blank" class="github-link">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                </svg>
+                GitHub
+            </a>
+        </footer>
+    </div>
+
+    <script src="engine.js"></script>
+</body>
+</html>

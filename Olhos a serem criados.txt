@@ -1,0 +1,8 @@
+eyes_neutral.svg (Neutro)
+eyes_happy.svg (Feliz)
+eyes_sad.svg (Triste)
+eyes_curious.svg (Curioso)
+eyes_angry.svg (Chateado)
+eyes_closed.svg (Olhos Fechados)
+eyes_enchanted.svg (Encantado)
+eyes_wink.svg (Piscando um Olho)
