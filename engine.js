@@ -1,3 +1,78 @@
+// --- Funções auxiliares (do utils.js) ---
+function getMax(arr) {
+    return arr.reduce((max, current) => current > max ? current : max, arr[0]);
+}
+
+function getMin(arr) {
+    return arr.reduce((min, current) => current < min ? current : min, arr[0]);
+}
+
+function isValidInteger(value) {
+    const num = parseInt(value);
+    return !isNaN(num) && Number.isInteger(num) && num >= 0;
+}
+
+function formatTime(seconds) {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// --- Classe Timeline (do timeline.js) ---
+class Timeline {
+    constructor() {
+        this.points = []; // Array para armazenar os pontos de tempo
+    }
+
+    // Adiciona um novo ponto de tempo
+    addPoint(time, expression) {
+        // Verifica se já existe um ponto nesse tempo
+        const existingIndex = this.points.findIndex(point => point.time === time);
+        if (existingIndex !== -1) {
+            // Se existir, atualiza a expressão
+            this.points[existingIndex].expression = expression;
+        } else {
+            // Caso contrário, adiciona um novo ponto
+            this.points.push({ time, expression });
+            // Mantém a lista ordenada por tempo
+            this.points.sort((a, b) => a.time - b.time);
+        }
+    }
+
+    // Remove um ponto de tempo
+    removePoint(time) {
+        this.points = this.points.filter(point => point.time !== time);
+    }
+
+    // Obtém a expressão para um determinado tempo
+    getExpressionAtTime(currentTime) {
+        // Procura o último ponto de tempo que é menor ou igual ao tempo atual
+        const latestPoint = this.points.findLast(point => point.time <= currentTime);
+        return latestPoint ? latestPoint.expression : 'neutral'; // Se não encontrar, retorna 'neutral'
+    }
+
+    // Converte o array de pontos para um objeto de mapeamento (como o antigo eyeExpressionTimeline)
+    toMap() {
+        const map = {};
+        this.points.forEach(point => {
+            map[point.time] = point.expression;
+        });
+        return map;
+    }
+
+    // Converte um objeto de mapeamento de volta para um array de pontos
+    fromMap(map) {
+        this.points = Object.entries(map).map(([time, expression]) => ({
+            time: parseFloat(time),
+            expression
+        }));
+        // Ordena por tempo
+        this.points.sort((a, b) => a.time - b.time);
+    }
+}
+
+// --- Classe principal LipSyncApp ---
 class LipSyncApp {
     constructor() {
         this.audioContext = null;
@@ -26,7 +101,7 @@ class LipSyncApp {
         this.isAutoBlinking = false; // Estado do piscar automático
         this.blinkIntervalId = null; // ID do intervalo de piscar
         this.isCurrentlyBlinking = false; // Flag para evitar piscadas simultâneas
-        this.eyeExpressionTimeline = {}; // Armazena { tempo: expressao }
+        this.eyeExpressionTimeline = new Timeline(); // Armazena { tempo: expressao }
         this.eyeGender = 'masc'; // Valor padrão: 'masc' ou 'fem'
 
         // Armazenar as imagens SVG das bocas
@@ -73,7 +148,12 @@ class LipSyncApp {
             eyeExpressionSelectors: document.querySelectorAll('.eye-expression-selector'),
             // --- Novo: Botões de Gênero ---
             genderMaleBtn: document.getElementById('genderMaleBtn'),
-            genderFemaleBtn: document.getElementById('genderFemaleBtn')
+            genderFemaleBtn: document.getElementById('genderFemaleBtn'),
+            // --- Novo: Elementos para Timeline Interativa ---
+            addTimePointBtn: document.getElementById('addTimePointBtn'),
+            expressionTimelineContainer: document.getElementById('expressionTimelineContainer'),
+            // --- Novo: Elemento para o campo de entrada de tempo ---
+            timeInputField: document.getElementById('timeInputField')
         };
     }
 
@@ -124,6 +204,26 @@ class LipSyncApp {
         if (this.elements.eyeExpressionSelectors) {
             this.elements.eyeExpressionSelectors.forEach(selector => {
                 selector.addEventListener('change', this.handleEyeExpressionChange.bind(this));
+            });
+        }
+
+        // --- Novo: Listener para o botão de adicionar ponto de tempo ---
+        if (this.elements.addTimePointBtn) {
+            this.elements.addTimePointBtn.addEventListener('click', () => {
+                this.addTimePointToTimeline();
+            });
+        }
+
+        // --- Novo: Listener para o campo de entrada de tempo ---
+        if (this.elements.timeInputField) {
+            this.elements.timeInputField.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    const timeValue = parseFloat(this.elements.timeInputField.value);
+                    if (!isNaN(timeValue)) {
+                        this.addTimePointToTimeline(timeValue);
+                        this.elements.timeInputField.value = ''; // Limpa o campo
+                    }
+                }
             });
         }
 
@@ -389,7 +489,7 @@ class LipSyncApp {
         this.lastTransitionTime = 0;
 
         // --- Reset do sistema de expressão dos olhos para o início ---
-        this.updateEyesBasedOnTimeline(0);
+        this.eyeExpressionTimeline.addPoint(0, 'neutral'); // Garante que há um ponto no início
 
         this.source = this.audioContext.createBufferSource();
         this.source.buffer = this.audioBuffer;
@@ -716,7 +816,7 @@ class LipSyncApp {
         if (timeMatch) {
             const timeInSeconds = parseInt(timeMatch[1], 10);
             const expression = event.target.value;
-            this.eyeExpressionTimeline[timeInSeconds] = expression;
+            this.eyeExpressionTimeline.addPoint(timeInSeconds, expression);
             console.log(`Expressão '${expression}' definida para ${timeInSeconds}s`);
             // Atualiza a visualização se o áudio não estiver tocando
             if (!this.isPlaying) {
@@ -802,11 +902,61 @@ class LipSyncApp {
         }, 200);
     }
 
+    // --- Nova função para adicionar um novo ponto de tempo à timeline ---
+    addTimePointToTimeline(timeValue = null) {
+        const container = this.elements.expressionTimelineContainer;
+        // Cria um novo elemento div para o ponto de tempo
+        const newControl = document.createElement('div');
+        newControl.className = 'expression-control';
+
+        // Cria o label (ex: "3s:")
+        const label = document.createElement('label');
+        const nextKey = timeValue || (this.eyeExpressionTimeline.points[this.eyeExpressionTimeline.points.length - 1]?.time || 0) + 2;
+        label.textContent = `${nextKey}s:`;
+        label.htmlFor = `exprAt${nextKey}s`;
+
+        // Cria o select
+        const select = document.createElement('select');
+        select.id = `exprAt${nextKey}s`;
+        select.className = 'eye-expression-selector';
+        const options = [
+            { value: 'neutral', text: 'Neutro' },
+            { value: 'happy', text: 'Feliz' },
+            { value: 'sad', text: 'Triste' },
+            { value: 'curious', text: 'Curioso' },
+            { value: 'angry', text: 'Chateado' },
+            { value: 'closed', text: 'Olhos Fechados' },
+            { value: 'enchanted', text: 'Encantado' },
+            { value: 'wink', text: 'Piscando um Olho' }
+        ];
+        options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            select.appendChild(option);
+        });
+
+        // Adiciona o evento change ao select
+        select.addEventListener('change', this.handleEyeExpressionChange.bind(this));
+
+        // Adiciona o label e o select ao novo control
+        newControl.appendChild(label);
+        newControl.appendChild(select);
+
+        // Adiciona o novo control ao container
+        container.appendChild(newControl);
+
+        // Adiciona o ponto de tempo ao objeto timeline com a expressão padrão
+        this.eyeExpressionTimeline.addPoint(nextKey, 'neutral');
+
+        // Atualiza a visualização
+        this.drawCharacterOnCanvas(this.currentMouth);
+    }
+
     // --- Nova função para atualizar os olhos com base na timeline ---
     updateEyesBasedOnTimeline(currentTime) {
         // Converter objeto timeline para array e ordenar por tempo
-        const timelineEntries = Object.entries(this.eyeExpressionTimeline)
-            .map(([time, expr]) => ({ time: parseFloat(time), expression: expr }))
+        const timelineEntries = this.eyeExpressionTimeline.points.map(point => ({ time: point.time, expression: point.expression }))
             .sort((a, b) => a.time - b.time);
 
         let newExpression = 'neutral'; // Default
@@ -897,9 +1047,9 @@ class LipSyncApp {
             ctx.save();
             if (this.isMouthUpsideDown) {
                 // Aplicar transformação para inverter verticalmente a boca
-                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.translate(mouthX + (mouthWidth / 2), mouthY + (mouthHeight / 2));
                 ctx.scale(1, -1); // Inverter verticalmente
-                ctx.translate(-canvas.width / 2, -canvas.height / 2);
+                ctx.translate(-(mouthX + (mouthWidth / 2)), -(mouthY + (mouthHeight / 2)));
             }
             ctx.drawImage(mouthImage, mouthX, mouthY, mouthWidth, mouthHeight);
             // Restaurar o estado do contexto para a boca
@@ -941,7 +1091,7 @@ class LipSyncApp {
         this.pauseTime = 0;
 
         // --- Reset do sistema de expressão dos olhos para o início ANTES de gravar ---
-        this.updateEyesBasedOnTimeline(0);
+        this.eyeExpressionTimeline.addPoint(0, 'neutral'); // Garante que há um ponto no início
 
         const stream = this.elements.previewCanvas.captureStream(30);
         this.mediaRecorderVideo = new MediaRecorder(stream, { mimeType: 'video/webm' });
